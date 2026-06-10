@@ -1,5 +1,12 @@
 import express from 'express'
 import cors from 'cors'
+import  'dotenv/config'
+import connectDB from "./config/mongodb.js"
+import connectCloudinary from './config/cloudinary.js'
+import hotelRouter from './routes/hotelRoute.js'
+import reservationRoute from './routes/reservationRoute.js'
+
+/*
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -11,7 +18,7 @@ dotenv.config({ path: path.join(__dirname, '.env') })
 console.log('Using MONGODB_URI:', process.env.MONGODB_URI)
 import connectDB from './config/mongodb.js'
 import connectCloudinary from './config/cloudinary.js'
-import hotelRouter from './routes/hotelRoute.js'
+import hotelRouter from './routes/hotelRoute.js'*/
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -26,6 +33,7 @@ app.use((req, res, next) => {
 })
 
 app.use('/api/hotel', hotelRouter)
+app.use('/api/reservation',reservationRoute)
 
 app.get('/', (req, res) => {
     res.send("API working")
