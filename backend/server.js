@@ -5,6 +5,7 @@ import connectDB from "./config/mongodb.js"
 import connectCloudinary from './config/cloudinary.js'
 import hotelRouter from './routes/hotelRoute.js'
 import reservationRoute from './routes/reservationRoute.js'
+import userRouter from './routes/userRoute.js'
 
 /*
 import dotenv from 'dotenv'
@@ -34,6 +35,7 @@ app.use((req, res, next) => {
 
 app.use('/api/hotel', hotelRouter)
 app.use('/api/reservation',reservationRoute)
+app.use('/api/user',userRouter)
 
 app.get('/', (req, res) => {
     res.send("API working")
