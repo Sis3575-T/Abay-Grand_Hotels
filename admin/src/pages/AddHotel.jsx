@@ -3,21 +3,23 @@ import default_img from '../assets/upload_img.jpg'
 import axios from 'axios'
 import { backendUrl } from '../App'
 
-const AddHotel = () => {
+const AddHotel = ({token}) => {
   const [image, setImage] = useState(null)
   const [name, setName] = useState("")
   const [description,setDescription] = useState("")
   const [price, setPrice] = useState("")
-
-  const handleSubmit = async (e) => {
+  
+  const roomSubmition = async (e) => {
     e.preventDefault()
-    if (!image) return alert('Please select an image')
-    const fd = new FormData()
-    fd.append('image', image)
-    fd.append('name', name)
-    fd.append('description', description)
-    fd.append('price', price)
+    
+   
     try {
+      const fd = new FormData()
+      if (image) fd.append('image', image)
+      fd.append('name', name)
+      fd.append('description', description)
+      fd.append('price', price)
+
       const res = await axios.post(backendUrl + '/api/hotel/add', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       if (res.data?.success) {
         alert('Room added')
@@ -33,7 +35,7 @@ const AddHotel = () => {
 
   return (
     <div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={roomSubmition}>
         <div>
          <p> Upload Image</p>
          <div>

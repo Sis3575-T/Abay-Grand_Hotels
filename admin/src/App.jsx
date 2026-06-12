@@ -8,8 +8,8 @@ import AddHotel from './pages/AddHotel.jsx'
 import ListHotel from './pages/ListHotel.jsx'
 import Reservation from './pages/Reservation.jsx'
 
-
 export const backendUrl = 'http://localhost:4000'
+
 const STORAGE_KEY = 'adminToken'
 const App = () => {
   const [token, setTokenState] = useState(() => {
@@ -33,7 +33,8 @@ const App = () => {
     else delete axios.defaults.headers.common['Authorization']
   }, [token])
   return (
-    <div>
+    <div className='bg-white min-h-screen'>
+      
       {
         !token ? (
           <Login setToken={setToken}/>
@@ -43,7 +44,7 @@ const App = () => {
             <Sidebar setToken={setToken} />
             <div className='w-[70%] ml-[max(5vw,25px)] my-8 text-black text-base '>
               <Routes>
-                <Route path='/add' element={<AddHotel />}/>
+                <Route path='/add' element={<AddHotel token={token} />}/>
                 <Route path='/list' element={<ListHotel />}/>
                 <Route path='/reservation' element={<Reservation />}/>
               </Routes>
