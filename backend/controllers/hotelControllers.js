@@ -3,7 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 
 const addHotel = async (req, res) => {
 	try {
-		const { name, price, description } = req.body;
+		const { name, price, description, roomType, capacity, available } = req.body;
 		const image = req.file;
 
 		if (!image || !image.path) {
@@ -19,6 +19,9 @@ const addHotel = async (req, res) => {
 			description,
 			price: Number(price) || 0,
 			image: imageUrl,
+			roomType: roomType || 'Standard',
+			capacity: Number(capacity) || 2,
+			available: available === 'true' || available === true,
 			date: Date.now()
 		};
 
@@ -38,6 +41,34 @@ const listHotel = async (req, res) => {
 	} catch (error) {
 		console.error('listHotel error:', error?.message || error);
 		return res.status(500).json({ success: false, message: "error listing hotel room" });
+	}
+};
+
+const editHotel = async (req, res) => {
+	try {
+		const { id, name, price, description, roomType, capacity, available } = req.body;
+		if (!id) return res.status(400).json({ success: false, message: 'Room id is required' });
+
+		const updateData = {};
+		if (name) updateData.name = name;
+		if (description) updateData.description = description;
+		if (price) updateData.price = Number(price);
+		if (roomType) updateData.roomType = roomType;
+		if (capacity) updateData.capacity = Number(capacity);
+		if (available !== undefined) updateData.available = available === 'true' || available === true;
+
+		const image = req.file;
+		if (image && image.path) {
+			const result = await cloudinary.uploader.upload(image.path, { resource_type: 'image' });
+			updateData.image = result?.secure_url || result?.secureUrl || updateData.image;
+		}
+
+		const updated = await hotelModel.findByIdAndUpdate(id, updateData, { new: true });
+		if (!updated) return res.status(404).json({ success: false, message: 'Room not found' });
+		return res.json({ success: true, message: 'Room updated successfully', hotel: updated });
+	} catch (error) {
+		console.error('editHotel error:', error?.message || error);
+		return res.status(500).json({ success: false, message: 'error updating hotel room' });
 	}
 };
 
@@ -67,4 +98,4 @@ const singleHotel = async (req, res) => {
 	}
 };
 
-export { addHotel, listHotel, removeHotel, singleHotel };
+export { addHotel, listHotel, editHotel, removeHotel, singleHotel };

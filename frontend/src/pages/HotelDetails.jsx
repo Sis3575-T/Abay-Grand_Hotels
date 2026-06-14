@@ -1,78 +1,242 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { roomData } from '../assets/asset'
+import axios from 'axios'
+import { backendUrl } from '../App'
 import { FaWifi, FaTv, FaUtensils, FaSwimmingPool, FaConciergeBell } from 'react-icons/fa'
 
 const HotelDetails = () => {
   const { id } = useParams()
-  const room = roomData.find((r) => r.id === parseInt(id))
+  const [room, setRoom] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [notification, setNotification] = useState(null)
+  const [formErrors, setFormErrors] = useState({})
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    checkin: '',
+    checkout: '',
+    guests: 1,
+    roomName: '',
+    roomId: ''
+  })
 
-  if (!room) return (
-    <div className="p-6">
-      <h1>Hotel Details</h1>
-      <p>Room not found.</p>
-    </div>
-  )
+  useEffect(() => {
+    const fetchRoomDetails = async () => {
+      try {
+        setLoading(true)
+        const response = await axios.get(`${backendUrl}/api/hotel/rooms/${id}`)
+        if (response.data && response.data.hotel) {
+          const fetched = response.data.hotel
+          setRoom(fetched)
+          setFormData(prev => ({
+            ...prev,
+            roomName: fetched.name,
+            roomId: fetched._id
+          }))
+        }
+      } catch (error) {
+        console.log('Error fetching room details:', error)
+        setNotification({ type: 'error', message: 'Failed to load room details. Please try again.' })
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRoomDetails()
+  }, [id])
+
+  const handleChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    setFormErrors(prev => ({ ...prev, [e.target.name]: '' }))
+  }
+
+  const validate = () => {
+    const errors = {}
+    if (!formData.name.trim()) errors.name = 'Name is required'
+    if (!formData.email.trim()) errors.email = 'Email is required'
+    if (!formData.phone.trim()) errors.phone = 'Phone is required'
+    if (!formData.checkin) errors.checkin = 'Check-in date is required'
+    if (!formData.checkout) errors.checkout = 'Check-out date is required'
+    if (formData.checkin && formData.checkout && formData.checkout <= formData.checkin) {
+      errors.checkout = 'Check-out must be after check-in'
+    }
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (formData.checkin && new Date(formData.checkin) < today) {
+      errors.checkin = 'Check-in cannot be in the past'
+    }
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!validate()) return
+    try {
+      setSubmitting(true)
+      const response = await axios.post(`${backendUrl}/api/reservation/create`, formData)
+      if (response.data.message === 'reservation created successfully') {
+        setNotification({ type: 'success', message: 'Reservation booked successfully!' })
+        setFormData(prev => ({
+          ...prev,
+          name: '',
+          email: '',
+          phone: '',
+          checkin: '',
+          checkout: '',
+          guests: 1
+        }))
+      } else {
+        setNotification({ type: 'error', message: response.data.message || 'Failed to create reservation' })
+      }
+    } catch (error) {
+      console.error('Booking error:', error)
+      setNotification({ type: 'error', message: 'Error occurred while booking. Please try again.' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-xl text-gray-500">Loading room details...</p>
+      </div>
+    )
+  }
+
+  if (!room) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p className="text-xl text-red-500">Room not found.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-7xl p-6">
-      
-
+      {notification && (
+        <div className={`mb-4 p-3 rounded text-sm font-medium ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {notification.message}
+          <button onClick={() => setNotification(null)} className="float-right font-bold">&times;</button>
+        </div>
+      )}
       <div className="grid md:grid-cols-3 gap-8">
         {/* Left: Image + description (spans 2 cols) */}
         <div className="md:col-span-2 space-y-6">
           <div>
             <h2 className="text-3xl font-bold">{room.name}</h2>
-            <p className="text-xl text-lime-500 mt-1">${room.price}</p>
+            <p className="text-xl text-lime-500 mt-1">${room.price} / night</p>
           </div>
 
-          <img src={room.image} alt={room.name} className="w-full rounded-lg shadow-md" />
+          <img src={room.image} alt={room.name} className="w-full rounded-lg shadow-md" onError={(e) => { e.target.style.display = 'none' }} />
 
           <div className="bg-gray-100 p-4 rounded-lg shadow-md">
             <h2 className="text-xl font-semibold mb-3">Amenities</h2>
             <div className="grid grid-cols-2 gap-4 text-gray-700">
-              <div className="flex items-center gap-2"><FaWifi /> wi-fi</div>
+              <div className="flex items-center gap-2"><FaWifi /> Free Wi-Fi</div>
               <div className="flex items-center gap-2"><FaTv /> Cable TV</div>
-              <div className="flex items-center gap-2"><FaUtensils /> Resturant</div>
+              <div className="flex items-center gap-2"><FaUtensils /> Restaurant</div>
               <div className="flex items-center gap-2"><FaSwimmingPool /> Swimming Pool</div>
               <div className="flex items-center gap-2"><FaConciergeBell /> Room Service</div>
             </div>
 
             <div className="mt-4">
               <h2 className="text-lg font-medium">Room Description</h2>
-              <p className="text-gray-700">{room.description}</p>
+              <p className="text-gray-700">{room.description || 'A luxurious room designed for your comfort and relaxation.'}</p>
             </div>
           </div>
         </div>
 
         {/* Right: Booking form */}
-        <aside className="p-4 rounded-lg shadow-sm">
+        <aside className="p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-xl font-bold mb-3">Book Your Stay</h2>
-          <form className="space-y-3">
-            <input className="w-full p-2 border rounded" type="text" placeholder="Name" />
-            <input className="w-full p-2 border rounded" type="email" placeholder="Email" />
-            <input className="w-full p-2 border rounded" type="tel" placeholder="Phone Number" />
+          <form className="space-y-3" onSubmit={handleSubmit}>
+            <div>
+              <input
+                className="w-full p-2 border rounded"
+                type="text"
+                name="name"
+                placeholder="Full Name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+              />
+              {formErrors.name && <p className="text-xs text-red-600 mt-0.5">{formErrors.name}</p>}
+            </div>
+            <div>
+              <input
+                className="w-full p-2 border rounded"
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+              />
+              {formErrors.email && <p className="text-xs text-red-600 mt-0.5">{formErrors.email}</p>}
+            </div>
+            <div>
+              <input
+                className="w-full p-2 border rounded"
+                type="tel"
+                name="phone"
+                placeholder="Phone Number"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+              />
+              {formErrors.phone && <p className="text-xs text-red-600 mt-0.5">{formErrors.phone}</p>}
+            </div>
 
             <div>
               <label className="block text-sm font-bold">Check-In</label>
-              <input className="w-full p-2 border rounded" type="date" />
+              <input
+                className="w-full p-2 border rounded"
+                type="date"
+                name="checkin"
+                value={formData.checkin}
+                onChange={handleChange}
+                required
+              />
+              {formErrors.checkin && <p className="text-xs text-red-600 mt-0.5">{formErrors.checkin}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-bold">Check-Out</label>
-              <input className="w-full p-2 border rounded" type="date" />
+              <input
+                className="w-full p-2 border rounded"
+                type="date"
+                name="checkout"
+                value={formData.checkout}
+                onChange={handleChange}
+                required
+              />
+              {formErrors.checkout && <p className="text-xs text-red-600 mt-0.5">{formErrors.checkout}</p>}
             </div>
 
             <div>
               <label className="block text-sm font-bold">Number of Guests</label>
-              <select className="w-full p-2 border rounded">
-                {[...Array(3).keys()].map((i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1} Guest(s)</option>
+              <select
+                className="w-full p-2 border rounded"
+                name="guests"
+                value={formData.guests}
+                onChange={handleChange}
+              >
+                {[...Array(10).keys()].map((i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
                 ))}
               </select>
             </div>
 
-            <button className="w-full bg-lime-600 text-white p-2 rounded" type="submit">Book Now</button>
+            <button
+              className="w-full bg-lime-600 text-white p-2 rounded hover:bg-lime-700 transition-colors duration-200 disabled:opacity-60"
+              type="submit"
+              disabled={submitting}
+            >
+              {submitting ? 'Booking...' : 'Book Now'}
+            </button>
           </form>
         </aside>
       </div>

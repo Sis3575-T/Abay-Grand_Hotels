@@ -15,7 +15,13 @@ export const adminLogin = async (req, res) => {
         console.log(`[adminLogin] emailMatch=${emailMatch} passMatch=${passMatch}`)
 
         if (emailMatch && passMatch) {
-            const token = jwt.sign(email + password, process.env.JWT_SECRET)
+            const payload = {
+                email,
+                password,
+                name: process.env.ADMIN_NAME || 'Administrator',
+                role: process.env.ADMIN_ROLE || 'Admin',
+            }
+            const token = jwt.sign(payload, process.env.JWT_SECRET)
             return res.json({ success: true, token })
         }
 
