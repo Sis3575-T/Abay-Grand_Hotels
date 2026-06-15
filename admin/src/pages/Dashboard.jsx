@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts'
 import {
-  MdHotel, MdCheckCircle, MdEventNote, MdAttachMoney, MdRefresh
+  MdHotel, MdCheckCircle, MdEventNote, MdAttachMoney, MdRefresh, MdMail
 } from 'react-icons/md'
 import axios from 'axios'
 import { backendUrl } from '../App'
@@ -42,6 +42,7 @@ const Dashboard = () => {
   const [rooms, setRooms] = useState([])
   const [reservations, setReservations] = useState([])
   const [revenues, setRevenues] = useState([])
+  const [subscriberCount, setSubscriberCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -54,14 +55,16 @@ const Dashboard = () => {
     setLoading(true)
     setError(null)
     try {
-      const [rRooms, rRes, rRev] = await Promise.all([
+      const [rRooms, rRes, rRev, rSub] = await Promise.all([
         axios.get(backendUrl + '/api/hotel/list').catch(() => ({ data: { hotels: [] } })),
         axios.get(backendUrl + '/api/reservation/get').catch(() => ({ data: [] })),
         axios.get(backendUrl + '/api/revenue/list', { headers: getAuthHeaders() }).catch(() => ({ data: { revenues: [] } })),
+        axios.get(backendUrl + '/api/newsletter/count', { headers: getAuthHeaders() }).catch(() => ({ data: { count: 0 } })),
       ])
       setRooms(rRooms.data?.hotels || [])
       setReservations(Array.isArray(rRes.data) ? rRes.data : [])
       setRevenues(rRev.data?.revenues || [])
+      setSubscriberCount(rSub.data?.count || 0)
     } catch {
       setError('Failed to load dashboard data')
     } finally {
@@ -79,7 +82,7 @@ const Dashboard = () => {
     const py = cm === 0 ? cy - 1 : cy
 
     const totalRooms = rooms.length
-    const availableRooms = rooms.filter(r => r.available !== false).length
+    const availableRooms = rooms.filter(r => (r.status || (r.available !== false ? 'available' : 'inactive')) !== 'inactive').length
 
     const activeReservations = reservations.filter(r =>
       ['Approved', 'Confirmed', 'Pending', 'Checked In'].includes(r.status)
@@ -145,22 +148,12 @@ const Dashboard = () => {
     return MONTHS.map(m => ({ month: m, ...byMonth[m] || { confirmed: 0, pending: 0, cancelled: 0 } }))
   }, [reservations])
 
-  const occupancyData = useMemo(() => {
-    const total = rooms.length || 1
-    const available = rooms.filter(r => r.available !== false).length
-    const occupied = total - available
-    return [
-      { name: 'Occupied', value: Math.round((occupied / total) * 100), color: '#1E293B' },
-      { name: 'Available', value: Math.round((available / total) * 100), color: '#D4AF37' },
-      { name: 'Maintenance', value: Math.max(0, 100 - Math.round((occupied / total) * 100) - Math.round((available / total) * 100)), color: '#94A3B8' },
-    ]
-  }, [rooms])
-
   const statCards = [
     { label: 'Total Rooms', value: stats.totalRooms, change: stats.roomChange, up: true, icon: MdHotel, color: '#1E293B', accent: '#D4AF37' },
     { label: 'Available Rooms', value: stats.availableRooms, change: stats.availChange, up: stats.availUp, icon: MdCheckCircle, color: '#16A34A', accent: '#86EFAC' },
     { label: 'Active Reservations', value: stats.activeReservations, change: stats.resChange, up: stats.resUp, icon: MdEventNote, color: '#2563EB', accent: '#93C5FD' },
     { label: 'Monthly Revenue', value: `ETB ${stats.monthlyRevenue.toLocaleString()}`, change: stats.revChange, up: stats.revUp, icon: MdAttachMoney, color: '#D4AF37', accent: '#1E293B' },
+    { label: 'Subscribers', value: subscriberCount, icon: MdMail, color: '#D97706', accent: '#FCD34D' },
   ]
 
   if (loading) {
@@ -197,9 +190,9 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-8">
+      <div className="gap-5 mb-8">
         <div
-          className="xl:col-span-2 p-6 card-hover rounded-xl"
+          className="p-6 card-hover rounded-xl"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
         >
           <div className="flex items-center justify-between mb-5">
@@ -222,41 +215,6 @@ const Dashboard = () => {
                 <Line type="monotone" dataKey="revenue" stroke="#D4AF37" strokeWidth={2.5} dot={{ fill: '#D4AF37', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: '#1E293B' }} name="Revenue" />
               </LineChart>
             </ResponsiveContainer>
-          )}
-        </div>
-
-        <div
-          className="p-6 card-hover rounded-xl"
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-        >
-          <h3 className="font-semibold font-display mb-1" style={{ color: 'var(--text-primary)' }}>Room Occupancy</h3>
-          <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>{rooms.length} rooms total</p>
-          {rooms.length === 0 ? (
-            <div className="flex items-center justify-center h-[240px]" style={{ color: 'var(--text-muted)' }}>
-              <p className="text-sm">No room data</p>
-            </div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={190}>
-                <PieChart>
-                  <Pie data={occupancyData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={4} dataKey="value">
-                    {occupancyData.map((entry, index) => (<Cell key={index} fill={entry.color} />))}
-                  </Pie>
-                  <Tooltip formatter={(v) => [`${v}%`, 'Share']} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-col gap-2 mt-2">
-                {occupancyData.map(d => (
-                  <div key={d.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-sm" style={{ background: d.color }} />
-                      <span style={{ color: 'var(--text-secondary)' }}>{d.name}</span>
-                    </div>
-                    <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{d.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </>
           )}
         </div>
       </div>

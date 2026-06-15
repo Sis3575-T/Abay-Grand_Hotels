@@ -16,6 +16,7 @@ const defaultSettings = {
   description: 'Experience luxury at the heart of Addis Ababa. Abay Grand Hotel offers world-class accommodations, fine dining, and exceptional service.',
   tagline: 'Where Luxury Meets Comfort',
   heroButtonText: 'BOOK YOUR STAY',
+  heroImage: '',
   newsletterTitle: 'Sign Up for Exclusive Offers',
   newsletterButtonText: 'Join Now',
   newsletterPlaceholder: 'Enter your email',
@@ -70,7 +71,7 @@ const updateSettings = async (req, res) => {
     const updateData = {}
     const fields = [
       'hotelName', 'address', 'phone', 'email', 'website',
-      'description', 'tagline', 'heroButtonText',
+      'description', 'tagline', 'heroButtonText', 'heroImage',
       'newsletterTitle', 'newsletterButtonText', 'newsletterPlaceholder',
       'roomsSectionTitle', 'facilityTitle', 'facilitySubtitle',
       'aboutTitle', 'aboutSubtitle', 'aboutContent', 'aboutImage',
@@ -88,12 +89,28 @@ const updateSettings = async (req, res) => {
     }
 
     if (req.files?.logo?.[0]) {
-      const result = await cloudinary.uploader.upload(req.files.logo[0].path, { resource_type: 'image' })
-      updateData.logo = result?.secure_url || result?.secureUrl || ''
+      try {
+        const result = await cloudinary.uploader.upload(req.files.logo[0].path, { resource_type: 'image' })
+        updateData.logo = result?.secure_url || result?.secureUrl || ''
+      } catch (e) {
+        console.error('Logo upload failed (continuing):', e.message)
+      }
     }
     if (req.files?.aboutImage?.[0]) {
-      const result = await cloudinary.uploader.upload(req.files.aboutImage[0].path, { resource_type: 'image' })
-      updateData.aboutImage = result?.secure_url || result?.secureUrl || ''
+      try {
+        const result = await cloudinary.uploader.upload(req.files.aboutImage[0].path, { resource_type: 'image' })
+        updateData.aboutImage = result?.secure_url || result?.secureUrl || ''
+      } catch (e) {
+        console.error('About image upload failed (continuing):', e.message)
+      }
+    }
+    if (req.files?.heroImage?.[0]) {
+      try {
+        const result = await cloudinary.uploader.upload(req.files.heroImage[0].path, { resource_type: 'image' })
+        updateData.heroImage = result?.secure_url || result?.secureUrl || ''
+      } catch (e) {
+        console.error('Hero image upload failed (continuing):', e.message)
+      }
     }
 
     let settings = await Settings.findOne()

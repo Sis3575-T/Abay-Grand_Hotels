@@ -3,6 +3,16 @@ import Newsletter from '../models/newsletterModels.js'
 
 const newsletterRouter = express.Router()
 
+newsletterRouter.get('/count', async (req, res) => {
+  try {
+    const count = await Newsletter.countDocuments()
+    res.json({ success: true, count })
+  } catch (error) {
+    console.error('newsletter count error:', error?.message || error)
+    res.status(500).json({ success: false, message: 'Error fetching subscriber count' })
+  }
+})
+
 newsletterRouter.post('/subscribe', async (req, res) => {
   try {
     const { email } = req.body

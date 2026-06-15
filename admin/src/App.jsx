@@ -37,7 +37,6 @@ const App = () => {
   const [token, setTokenState] = useState(() => {
     try { return localStorage.getItem('adminToken') || '' } catch { return '' }
   })
-  const [initialized, setInitialized] = useState(false)
   const [darkMode, setDarkMode] = useState(() => {
     try { return localStorage.getItem('abay-theme') === 'dark' } catch { return false }
   })
@@ -90,12 +89,6 @@ const App = () => {
     try { localStorage.setItem('abay-theme', darkMode ? 'dark' : 'light') } catch {}
   }, [darkMode])
 
-  useEffect(() => {
-    try { const t = localStorage.getItem('adminToken'); if (t) setTokenState(t) }
-    catch {}
-    setInitialized(true)
-  }, [])
-
   // Debug helper: record last click target so we can trace unexpected logouts
   useEffect(() => {
     const handler = (e) => {
@@ -115,7 +108,6 @@ const App = () => {
     return () => document.removeEventListener('click', handler, true)
   }, [])
 
-  if (!initialized) return null
   if (!token) return <Login setToken={setToken} />
 
   return (

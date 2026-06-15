@@ -9,6 +9,7 @@ const hotelSchema = new mongoose.Schema({
     roomType: { type: String, default: 'Standard' },
     capacity: { type: Number, default: 2 },
     available: { type: Boolean, default: true },
+    status: { type: String, enum: ['available', 'maintenance', 'inactive'], default: 'available' },
     date: { type: Number, required: true },
 })
 

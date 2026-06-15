@@ -1,4 +1,4 @@
-import react, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect } from "react";
 import axios from 'axios'
 import { roomData } from '../assets/asset'
 import { backendUrl } from "../App";

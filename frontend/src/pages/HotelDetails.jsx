@@ -110,7 +110,9 @@ const HotelDetails = () => {
     }
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    if (formData.checkin && new Date(formData.checkin) < today) {
+    const checkinDate = new Date(formData.checkin + 'T00:00:00')
+    checkinDate.setHours(0, 0, 0, 0)
+    if (formData.checkin && checkinDate < today) {
       errors.checkin = 'Check-in cannot be in the past'
     }
     setFormErrors(errors)

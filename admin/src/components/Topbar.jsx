@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import {
-  MdNotifications, MdDarkMode, MdLightMode, MdSearch,
+  MdNotifications, MdDarkMode, MdLightMode, MdSearch, MdDelete,
   MdCheckCircle, MdCancel, MdMeetingRoom, MdLogout, MdMessage, MdStar, MdAddCircle
 } from 'react-icons/md'
 import { useTheme, useSettings, backendUrl } from '../App'
@@ -24,7 +24,9 @@ const typeIcons = {
 }
 
 const timeAgo = (ts) => {
-  const diff = Date.now() - ts
+  const date = new Date(ts)
+  if (isNaN(date.getTime())) return String(ts)
+  const diff = Date.now() - date.getTime()
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
   if (mins < 60) return `${mins}m ago`
@@ -90,6 +92,15 @@ const Topbar = ({ setToken }) => {
       await axios.put(backendUrl + '/api/notification/read/' + id, {}, { headers: getAuthHeaders() })
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n))
       setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch {}
+  }
+
+  const handleDeleteNotification = async (e, id, wasRead) => {
+    e.stopPropagation()
+    try {
+      await axios.delete(backendUrl + '/api/notification/delete/' + id, { headers: getAuthHeaders() })
+      setNotifications(prev => prev.filter(n => n._id !== id))
+      if (!wasRead) setUnreadCount(prev => Math.max(0, prev - 1))
     } catch {}
   }
 
@@ -227,6 +238,14 @@ const Topbar = ({ setToken }) => {
                       </p>
                       <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{timeAgo(n.createdAt)}</p>
                     </div>
+                    <button
+                      onClick={(e) => handleDeleteNotification(e, n._id, n.read)}
+                      className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0 mt-1 hover:opacity-70 transition-opacity"
+                      style={{ color: '#DC2626' }}
+                      title="Delete"
+                    >
+                      <MdDelete size={14} />
+                    </button>
                     {!n.read && (
                       <div className="w-2 h-2 rounded-full flex-shrink-0 mt-2" style={{ background: '#D4AF37' }} />
                     )}

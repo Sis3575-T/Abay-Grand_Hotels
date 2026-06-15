@@ -8,6 +8,9 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import notify from '../components/ui/Toast'
 
 const ROOM_TYPES = ['Standard', 'Deluxe', 'Suite', 'Presidential', 'Family', 'Twin', 'Single']
+const STATUS_OPTIONS = ['available', 'maintenance', 'inactive']
+const STATUS_LABELS = { available: 'Available', maintenance: 'Maintenance', inactive: 'Inactive' }
+const STATUS_COLORS = { available: '#059669', maintenance: '#D97706', inactive: '#DC2626' }
 const PAGE_SIZE = 6
 
 const RoomManagement = ({ token }) => {
@@ -26,14 +29,14 @@ const RoomManagement = ({ token }) => {
   const [price, setPrice] = useState('')
   const [roomType, setRoomType] = useState('Standard')
   const [capacity, setCapacity] = useState(2)
-  const [available, setAvailable] = useState(true)
+  const [status, setStatus] = useState('available')
   const [image, setImage] = useState(null)
   const [images, setImages] = useState([])
   const [errors, setErrors] = useState({})
 
   const getAuthHeaders = () => {
     const t = localStorage.getItem('adminToken')
-    return t ? { Authorization: `Bearer ${t}`, 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'multipart/form-data' }
+    return t ? { Authorization: `Bearer ${t}` } : {}
   }
 
   const fetchRooms = async () => {
@@ -61,7 +64,7 @@ const RoomManagement = ({ token }) => {
     setPrice('')
     setRoomType('Standard')
     setCapacity(2)
-    setAvailable(true)
+    setStatus('available')
     setImage(null)
     setImages([])
     setErrors({})
@@ -77,7 +80,7 @@ const RoomManagement = ({ token }) => {
     setPrice(room.price || '')
     setRoomType(room.roomType || 'Standard')
     setCapacity(room.capacity || 2)
-    setAvailable(room.available !== false)
+    setStatus(room.status || (room.available !== false ? 'available' : 'inactive'))
     setImage(null)
     setImages([])
     setErrors({})
@@ -102,17 +105,13 @@ const RoomManagement = ({ token }) => {
       const allImages = image ? [image, ...images] : images
       if (allImages.length > 0) {
         allImages.forEach((file) => fd.append('images', file))
-      } else if (!editRoom) {
-        notify.error('At least one room image is required')
-        setSaveLoading(false)
-        return
       }
       fd.append('name', name)
       fd.append('description', description)
       fd.append('price', price)
       fd.append('roomType', roomType)
       fd.append('capacity', String(capacity))
-      fd.append('available', String(available))
+      fd.append('status', status)
       if (editRoom) fd.append('id', editRoom._id)
 
       const url = editRoom ? backendUrl + '/api/hotel/edit' : backendUrl + '/api/hotel/add'
@@ -221,13 +220,24 @@ const RoomManagement = ({ token }) => {
                       <span style={{ fontSize: '2rem' }}>{'\uD83C\uDFE8'}</span>
                     </div>
                   )}
-                  {/* Availability badge removed as requested */}
+                  {/* Status badge */}
                   <div className="absolute" style={{ top: '12px', left: '12px' }}>
                     <span
                       className="px-2.5 py-1 rounded text-xs font-semibold"
                       style={{ background: '#1E293B', color: '#FFFFFF' }}
                     >
                       {room.roomType || 'Standard'}
+                    </span>
+                  </div>
+                  <div className="absolute" style={{ top: '12px', right: '12px' }}>
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-semibold"
+                      style={{
+                        background: STATUS_COLORS[room.status] || '#059669',
+                        color: '#FFFFFF',
+                      }}
+                    >
+                      {STATUS_LABELS[room.status] || 'Available'}
                     </span>
                   </div>
                 </div>
@@ -398,11 +408,11 @@ const RoomManagement = ({ token }) => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>Availability</label>
-              <select className="input-field" value={available} onChange={e => setAvailable(e.target.value === 'true')}>
-                <option value="true">Available</option>
-                <option value="false">Occupied</option>
+              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>Room Status</label>
+              <select className="input-field" value={status} onChange={e => setStatus(e.target.value)}>
+                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
               </select>
+              <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>Actual availability is calculated from bookings</p>
             </div>
           </div>
 

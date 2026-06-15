@@ -19,6 +19,7 @@ import housekeepingRouter from './routes/housekeepingRoute.js'
 import maintenanceRouter from './routes/maintenanceRoute.js'
 import backupRouter from './routes/backupRoute.js'
 import dashboardRouter from './routes/dashboardRoute.js'
+import aboutRouter from './routes/aboutRoute.js'
 
 /*
 import dotenv from 'dotenv'
@@ -36,15 +37,7 @@ import hotelRouter from './routes/hotelRoute.js'*/
 
 const app = express()
 const port = process.env.PORT || 4000
-connectDB().then(async () => {
-  try {
-    const { syncAllRoomStatuses } = await import('./controllers/reservationControllers.js')
-    await syncAllRoomStatuses()
-    console.log('Room availability statuses synchronized')
-  } catch (err) {
-    console.error('Room status sync on startup:', err?.message || err)
-  }
-})
+connectDB()
 connectCloudinary()
 app.use(cors())
 app.use(express.json())
@@ -70,6 +63,7 @@ app.use('/api/housekeeping', housekeepingRouter)
 app.use('/api/maintenance', maintenanceRouter)
 app.use('/api/backup', backupRouter)
 app.use('/api/dashboard', dashboardRouter)
+app.use('/api/about', aboutRouter)
 
 app.get('/', (req, res) => {
     res.send("API working")

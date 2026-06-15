@@ -1,14 +1,44 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import axios from 'axios'
+import { backendUrl } from '../App'
 import { MdHotel, MdPeople, MdStar, MdBusiness } from 'react-icons/md'
 import { FaWifi, FaTv, FaUtensils, FaSwimmingPool, FaConciergeBell, FaCar, FaSpa, FaDumbbell } from 'react-icons/fa'
 import { useSettings } from '../context/SettingsContext'
+import { getIcon } from '../utils/iconMap'
+
+const statIcons = [MdHotel, MdPeople, MdStar, MdBusiness]
+const statLabels = ['Luxury Rooms', 'Happy Guests', 'Years Experience', 'Guest Rating']
 
 const AboutUs = () => {
   const { settings } = useSettings()
   const aboutTitle = settings?.aboutTitle || 'About Deluxe Hotels'
   const aboutSubtitle = settings?.aboutSubtitle || 'Experience the pinnacle of luxury and comfort'
   const aboutContent = settings?.aboutContent || ''
+
+  const [aboutData, setAboutData] = useState(null)
+  const [aboutLoading, setAboutLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAbout = async () => {
+      try {
+        const r = await axios.get(`${backendUrl}/api/about/get`)
+        if (r.data?.success && r.data?.about) {
+          setAboutData(r.data.about)
+        }
+      } catch {
+        // Use defaults
+      } finally {
+        setAboutLoading(false)
+      }
+    }
+    fetchAbout()
+  }, [])
+
+  const amenities = aboutData?.amenities || []
+  const stats = aboutData?.stats || { luxuryRooms: '50+', happyGuests: '200+', yearsExperience: '15+', guestRating: '4.8' }
+  const statValues = [stats.luxuryRooms, stats.happyGuests, stats.yearsExperience, stats.guestRating]
+
   return (
     <div className="min-h-screen" style={{ background: '#F8FAFC' }}>
       <div className="relative h-[400px] bg-black flex items-center justify-center">
@@ -24,6 +54,8 @@ const AboutUs = () => {
             <h2 className="text-3xl font-bold mb-6" style={{ color: '#1E293B' }}>Our Story</h2>
             {aboutContent ? (
               <div className="text-base leading-relaxed" style={{ color: '#6B7280', whiteSpace: 'pre-wrap' }}>{aboutContent}</div>
+            ) : aboutData?.history ? (
+              <div className="text-base leading-relaxed" style={{ color: '#6B7280', whiteSpace: 'pre-wrap' }}>{aboutData.history}</div>
             ) : (
               <>
                 <p className="text-base leading-relaxed mb-4" style={{ color: '#6B7280' }}>
@@ -56,51 +88,61 @@ const AboutUs = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-20">
-          <div className="p-8 rounded-xl text-center" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-            <MdHotel size={40} className="mx-auto mb-3" style={{ color: '#2563EB' }} />
-            <p className="text-3xl font-bold" style={{ color: '#1E293B' }}>50+</p>
-            <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Luxury Rooms</p>
-          </div>
-          <div className="p-8 rounded-xl text-center" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-            <MdPeople size={40} className="mx-auto mb-3" style={{ color: '#2563EB' }} />
-            <p className="text-3xl font-bold" style={{ color: '#1E293B' }}>200+</p>
-            <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Happy Guests</p>
-          </div>
-          <div className="p-8 rounded-xl text-center" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-            <MdStar size={40} className="mx-auto mb-3" style={{ color: '#2563EB' }} />
-            <p className="text-3xl font-bold" style={{ color: '#1E293B' }}>15+</p>
-            <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Years Experience</p>
-          </div>
-          <div className="p-8 rounded-xl text-center" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-            <MdBusiness size={40} className="mx-auto mb-3" style={{ color: '#2563EB' }} />
-            <p className="text-3xl font-bold" style={{ color: '#1E293B' }}>4.8</p>
-            <p className="text-sm mt-1" style={{ color: '#6B7280' }}>Guest Rating</p>
-          </div>
+          {statValues.map((val, i) => {
+            const Icon = statIcons[i]
+            return (
+              <div key={i} className="p-8 rounded-xl text-center" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                <Icon size={40} className="mx-auto mb-3" style={{ color: '#2563EB' }} />
+                <p className="text-3xl font-bold" style={{ color: '#1E293B' }}>{val}</p>
+                <p className="text-sm mt-1" style={{ color: '#6B7280' }}>{statLabels[i]}</p>
+              </div>
+            )
+          })}
         </div>
 
         <div className="mb-20">
           <h2 className="text-3xl font-bold text-center mb-12" style={{ color: '#1E293B' }}>Our Amenities</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { icon: FaWifi, title: 'Free Wi-Fi', desc: 'High-speed internet throughout the hotel' },
-              { icon: FaTv, title: 'Cable TV', desc: 'Premium channels and entertainment' },
-              { icon: FaUtensils, title: 'Restaurant', desc: 'Fine dining with local & international cuisine' },
-              { icon: FaSwimmingPool, title: 'Swimming Pool', desc: 'Outdoor heated pool with poolside service' },
-              { icon: FaConciergeBell, title: 'Room Service', desc: '24/7 in-room dining and assistance' },
-              { icon: FaCar, title: 'Free Parking', desc: 'Secure parking for all our guests' },
-              { icon: FaSpa, title: 'Spa & Wellness', desc: 'Relaxing treatments and massage services' },
-              { icon: FaDumbbell, title: 'Fitness Center', desc: 'Modern gym equipment and personal training' },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-xl transition-all hover:shadow-md"
-                style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ background: '#EFF6FF' }}>
-                  <item.icon size={24} style={{ color: '#2563EB' }} />
+          {aboutLoading ? (
+            <div className="text-center py-8" style={{ color: '#94A3B8' }}>Loading amenities...</div>
+          ) : amenities.length === 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                { icon: FaWifi, title: 'Free Wi-Fi', desc: 'High-speed internet throughout the hotel' },
+                { icon: FaTv, title: 'Cable TV', desc: 'Premium channels and entertainment' },
+                { icon: FaUtensils, title: 'Restaurant', desc: 'Fine dining with local & international cuisine' },
+                { icon: FaSwimmingPool, title: 'Swimming Pool', desc: 'Outdoor heated pool with poolside service' },
+                { icon: FaConciergeBell, title: 'Room Service', desc: '24/7 in-room dining and assistance' },
+                { icon: FaCar, title: 'Free Parking', desc: 'Secure parking for all our guests' },
+                { icon: FaSpa, title: 'Spa & Wellness', desc: 'Relaxing treatments and massage services' },
+                { icon: FaDumbbell, title: 'Fitness Center', desc: 'Modern gym equipment and personal training' },
+              ].map((item, i) => (
+                <div key={i} className="p-6 rounded-xl transition-all hover:shadow-md"
+                  style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                  <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ background: '#EFF6FF' }}>
+                    <item.icon size={24} style={{ color: '#2563EB' }} />
+                  </div>
+                  <h3 className="font-semibold text-base mb-2" style={{ color: '#1E293B' }}>{item.title}</h3>
+                  <p className="text-sm" style={{ color: '#6B7280' }}>{item.desc}</p>
                 </div>
-                <h3 className="font-semibold text-base mb-2" style={{ color: '#1E293B' }}>{item.title}</h3>
-                <p className="text-sm" style={{ color: '#6B7280' }}>{item.desc}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {amenities.map((item, i) => {
+                const Icon = getIcon(item.icon) || FaWifi
+                return (
+                  <div key={item._id || i} className="p-6 rounded-xl transition-all hover:shadow-md"
+                    style={{ background: '#FFFFFF', border: '1px solid #E5E7EB' }}>
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center mb-4" style={{ background: '#EFF6FF' }}>
+                      <Icon size={24} style={{ color: '#2563EB' }} />
+                    </div>
+                    <h3 className="font-semibold text-base mb-2" style={{ color: '#1E293B' }}>{item.title}</h3>
+                    <p className="text-sm" style={{ color: '#6B7280' }}>{item.desc}</p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="p-12 rounded-xl text-center" style={{ background: '#1E293B' }}>

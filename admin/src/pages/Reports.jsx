@@ -118,7 +118,7 @@ const Reports = () => {
       data = filteredReservations.map(r => ({ Guest: r.name, Email: r.email, Room: r.roomName, 'Check-In': r.checkin, 'Check-Out': r.checkout, Guests: r.guests, Status: r.status }))
       sheetName = 'Reservations'
     } else if (activeTab === 'occupancy') {
-      data = rooms.map(r => ({ Room: r.name, Price: r.price, Available: r.available !== false ? 'Yes' : 'No', Capacity: r.capacity || '-' }))
+      data = rooms.map(r => { const rs = r.status || (r.available !== false ? 'available' : 'inactive'); return { Room: r.name, Price: r.price, Status: rs === 'available' ? 'Available' : rs === 'maintenance' ? 'Maintenance' : 'Inactive', Capacity: r.capacity || '-' } })
       sheetName = 'Occupancy'
     } else if (activeTab === 'customer') {
       const customers = [...new Set(reservations.map(r => r.email))]
@@ -251,12 +251,15 @@ const Reports = () => {
         )
       case 'occupancy':
         const total = rooms.length || 1
-        const available = rooms.filter(r => r.available !== false).length
-        const occupied = total - available
+        const getRoomStatus = (r) => r.status || (r.available !== false ? 'available' : 'inactive')
+        const availableCount = rooms.filter(r => getRoomStatus(r) === 'available').length
+        const maintenanceCount = rooms.filter(r => getRoomStatus(r) === 'maintenance').length
+        const inactiveCount = rooms.filter(r => getRoomStatus(r) === 'inactive').length
+        const occupiedCount = total - availableCount - maintenanceCount - inactiveCount
         const occupancyData = [
-          { name: 'Occupied', value: Math.round((occupied / total) * 100), color: '#1E293B' },
-          { name: 'Available', value: Math.round((available / total) * 100), color: '#D4AF37' },
-          { name: 'Maintenance', value: Math.max(0, 100 - Math.round((occupied / total) * 100) - Math.round((available / total) * 100)), color: '#94A3B8' },
+          { name: 'Occupied', value: Math.round((occupiedCount / total) * 100), color: '#1E293B' },
+          { name: 'Available', value: Math.round((availableCount / total) * 100), color: '#D4AF37' },
+          { name: 'Maintenance', value: Math.round((maintenanceCount / total) * 100), color: '#94A3B8' },
         ]
         return (
           <div>
@@ -298,7 +301,7 @@ const Reports = () => {
                   {rooms.map(r => (
                     <div key={r._id} className="flex items-center justify-between py-2 px-3 rounded" style={{ background: '#F9FAFB' }}>
                       <span className="text-sm font-medium" style={{ color: '#1E293B' }}>{r.name}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${r.available !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{r.available !== false ? 'Available' : 'Occupied'}</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${r.status === 'maintenance' ? 'bg-yellow-100 text-yellow-700' : r.status === 'inactive' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{r.status === 'maintenance' ? 'Maintenance' : r.status === 'inactive' ? 'Inactive' : 'Available'}</span>
                     </div>
                   ))}
                 </div>

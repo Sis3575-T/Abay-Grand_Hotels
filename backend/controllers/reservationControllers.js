@@ -8,8 +8,6 @@ const PAYMENT_STATUSES = ['Pending', 'Partially Paid', 'Paid']
 
 // Block new bookings when these statuses overlap the requested dates
 const BLOCKING_STATUSES = ['Pending', 'Approved', 'Confirmed', 'Checked In']
-// Mark room as occupied (not available) only for these statuses
-const OCCUPIED_STATUSES = ['Approved', 'Confirmed', 'Checked In']
 
 const getOverlappingReservations = async (roomId, checkin, checkout, excludeId = null, roomName = null) => {
   if (!checkin || !checkout || checkin >= checkout) return []
@@ -31,36 +29,7 @@ const getOverlappingReservations = async (roomId, checkin, checkout, excludeId =
   return await Reservation.find(query)
 }
 
-const syncRoomStatus = async (roomId) => {
-  if (!roomId) return
-  try {
-    const occupiedCount = await Reservation.countDocuments({
-      roomId: String(roomId),
-      status: { $in: OCCUPIED_STATUSES },
-    })
-    const hotel = await hotelModel.findById(roomId)
-    if (!hotel) return
 
-    const shouldBeAvailable = occupiedCount === 0
-    if (hotel.available !== shouldBeAvailable) {
-      hotel.available = shouldBeAvailable
-      await hotel.save()
-    }
-  } catch (error) {
-    console.error('syncRoomStatus error:', error?.message || error)
-  }
-}
-
-const syncAllRoomStatuses = async () => {
-  try {
-    const hotels = await hotelModel.find({})
-    for (const hotel of hotels) {
-      await syncRoomStatus(hotel._id.toString())
-    }
-  } catch (error) {
-    console.error('syncAllRoomStatuses error:', error?.message || error)
-  }
-}
 
 const getAdminInfo = (req) => {
   if (req.admin) {
@@ -113,6 +82,12 @@ const createReservation = async (req, res) => {
     const hotel = await hotelModel.findById(resolvedRoomId)
     if (!hotel) {
       return res.json({ success: false, message: 'Room not found' })
+    }
+    if (hotel.status === 'inactive') {
+      return res.json({ success: false, message: 'This room is inactive and cannot be booked.' })
+    }
+    if (hotel.status === 'maintenance') {
+      return res.json({ success: false, message: 'This room is under maintenance and cannot be booked.' })
     }
 
     const pricing = calculateBookingPrice(hotel.price, checkin, checkout)
@@ -201,7 +176,7 @@ const approveReservation = async (req, res) => {
     existing.status = 'Approved'
     existing.approvedBy = adminInfo
     await existing.save()
-    await syncRoomStatus(existing.roomId)
+    // Availability is dynamic — no manual sync needed
 
     logActivity({
       action: 'Reservation Approved',
@@ -238,7 +213,7 @@ const rejectReservation = async (req, res) => {
     existing.status = 'Rejected'
     existing.rejectedBy = adminInfo
     await existing.save()
-    await syncRoomStatus(existing.roomId)
+    // Availability is dynamic — no manual sync needed
 
     logActivity({
       action: 'Reservation Rejected',
@@ -275,7 +250,7 @@ const checkinReservation = async (req, res) => {
     existing.status = 'Checked In'
     existing.checkedInBy = adminInfo
     await existing.save()
-    await syncRoomStatus(existing.roomId)
+    // Availability is dynamic — no manual sync needed
 
     logActivity({
       action: 'Guest Checked In',
@@ -312,7 +287,7 @@ const checkoutReservation = async (req, res) => {
     existing.status = 'Checked Out'
     existing.checkedOutBy = adminInfo
     await existing.save()
-    await syncRoomStatus(existing.roomId)
+    // Availability is dynamic — no manual sync needed
 
     logActivity({
       action: 'Guest Checked Out',
@@ -349,7 +324,7 @@ const cancelReservation = async (req, res) => {
     existing.status = 'Cancelled'
     existing.cancelledBy = adminInfo
     await existing.save()
-    await syncRoomStatus(existing.roomId)
+    // Availability is dynamic — no manual sync needed
 
     logActivity({
       action: 'Reservation Cancelled',
@@ -390,7 +365,7 @@ const clientCancelReservation = async (req, res) => {
     existing.status = 'Cancelled'
     existing.cancelledBy = clientInfo
     await existing.save()
-    await syncRoomStatus(existing.roomId)
+    // Availability is dynamic — no manual sync needed
 
     logActivity({
       action: 'Reservation Cancelled',
@@ -446,6 +421,27 @@ const updateReservation = async (req, res) => {
       return res.json({ success: false, message: 'Check-out date must be after check-in date' })
     }
 
+    const datesOrRoomChanged =
+      req.body.checkin !== undefined ||
+      req.body.checkout !== undefined ||
+      req.body.roomId !== undefined ||
+      req.body.roomName !== undefined
+
+    if (datesOrRoomChanged) {
+      if (newRoomId) {
+        const hotel = await hotelModel.findById(newRoomId)
+        if (!hotel) {
+          return res.json({ success: false, message: 'Room not found' })
+        }
+        if (hotel.status === 'inactive') {
+          return res.json({ success: false, message: 'Cannot move reservation to an inactive room.' })
+        }
+        if (hotel.status === 'maintenance') {
+          return res.json({ success: false, message: 'Cannot move reservation to a room under maintenance.' })
+        }
+      }
+    }
+
     const overlapping = await getOverlappingReservations(newRoomId, newCheckin, newCheckout, id, newRoomName)
     if (overlapping.length > 0) {
       return res.json({
@@ -453,12 +449,6 @@ const updateReservation = async (req, res) => {
         message: 'This room is already booked for the selected dates. Please choose different dates or another room.',
       })
     }
-
-    const datesOrRoomChanged =
-      req.body.checkin !== undefined ||
-      req.body.checkout !== undefined ||
-      req.body.roomId !== undefined ||
-      req.body.roomName !== undefined
 
     if (datesOrRoomChanged) {
       let roomPrice = existing.pricePerNight
@@ -483,10 +473,7 @@ const updateReservation = async (req, res) => {
     const oldRoomId = existing.roomId
     const updated = await Reservation.findByIdAndUpdate(id, updateData, { new: true })
 
-    await syncRoomStatus(oldRoomId)
-    if (updated.roomId && updated.roomId !== oldRoomId) {
-      await syncRoomStatus(updated.roomId)
-    }
+    // Availability is dynamic
 
     logActivity({
       action: 'Reservation Updated',
@@ -510,7 +497,6 @@ const deleteReservation = async (req, res) => {
     const reservation = await Reservation.findById(id)
     if (reservation) {
       await Reservation.findByIdAndDelete(id)
-      await syncRoomStatus(reservation.roomId)
     }
     res.json({ success: true, message: 'reservation deleted successfully' })
   } catch (error) {
@@ -528,6 +514,17 @@ const checkAvailability = async (req, res) => {
     if (checkin >= checkout) {
       return res.json({ success: true, available: false, message: 'Check-out must be after check-in' })
     }
+
+    if (roomId) {
+      const hotel = await hotelModel.findById(roomId)
+      if (hotel && hotel.status === 'inactive') {
+        return res.json({ success: true, available: false, message: 'This room is inactive and cannot be booked.' })
+      }
+      if (hotel && hotel.status === 'maintenance') {
+        return res.json({ success: true, available: false, message: 'This room is under maintenance.' })
+      }
+    }
+
     const overlapping = await getOverlappingReservations(roomId, checkin, checkout, excludeId || null, roomName || null)
 
     let pricing = null
@@ -564,8 +561,5 @@ export {
   deleteReservation,
   checkAvailability,
   getOverlappingReservations,
-  syncRoomStatus,
-  syncAllRoomStatuses,
   BLOCKING_STATUSES,
-  OCCUPIED_STATUSES,
 }

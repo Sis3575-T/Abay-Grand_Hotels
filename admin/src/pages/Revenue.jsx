@@ -347,7 +347,7 @@ const Revenue = () => {
           r.customerName,
           r.roomNumber || '-',
           r.revenueType,
-          `$${r.amount.toLocaleString()}`,
+          `$${(r.amount ?? 0).toLocaleString()}`,
           r.date,
           r.paymentMethod,
           r.status,
@@ -411,7 +411,7 @@ const Revenue = () => {
         </div>
       ),
       render: (r) => (
-        <span className="font-bold text-sm" style={{ color: '#16A34A' }}>${r.amount.toLocaleString()}</span>
+        <span className="font-bold text-sm" style={{ color: '#16A34A' }}>${(r.amount ?? 0).toLocaleString()}</span>
       ),
     },
     {
@@ -668,7 +668,7 @@ const Revenue = () => {
               ['Customer Name', viewItem.customerName],
               ['Room Number', viewItem.roomNumber || '-'],
               ['Revenue Type', viewItem.revenueType],
-              ['Amount', `$${viewItem.amount.toLocaleString()}`],
+              ['Amount', `$${(viewItem.amount ?? 0).toLocaleString()}`],
               ['Date', viewItem.date],
               ['Payment Method', viewItem.paymentMethod],
               ['Status', viewItem.status],

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { backendUrl } from '../App'
 import axios from 'axios'
 import { MdVisibility, MdVisibilityOff } from 'react-icons/md'
@@ -11,6 +11,11 @@ const Login = ({ setToken }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    setEmail('')
+    setPassword('')
+  }, [])
+
   const adminLoginHandler = async (e) => {
     e.preventDefault()
     if (!email || !password) { setError('Email and password are required'); return }
@@ -20,6 +25,8 @@ const Login = ({ setToken }) => {
       const response = await axios.post(backendUrl + '/api/user/admin', { email, password })
       const data = response.data
       if (data && data.success) {
+        setEmail('')
+        setPassword('')
         setToken(data.token)
       } else {
         setError(data?.message || 'Login failed')
@@ -39,7 +46,7 @@ const Login = ({ setToken }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
-      <form onSubmit={adminLoginHandler} className="w-full max-w-md flex flex-col items-center gap-6 p-12 rounded-xl mb-8"
+      <form onSubmit={adminLoginHandler} autoComplete="off" className="w-full max-w-md flex flex-col items-center gap-6 p-12 rounded-xl mb-8"
         style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(15,23,42,0.08)', minHeight: '480px' }}>
         <div className="text-center mb-2">
           <h1 className="text-lg font-bold" style={{ color: '#1E293B' }}>Abay Grand Hotel</h1>

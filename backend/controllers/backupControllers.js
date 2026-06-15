@@ -97,15 +97,15 @@ const restoreBackup = async (req, res) => {
     const backup = await Backup.findById(req.params.id)
     if (!backup) return res.status(404).json({ success: false, message: 'Backup not found' })
     const data = backup.data
-    if (data.hotels) await Hotel.deleteMany({}); await Hotel.insertMany(data.hotels)
-    if (data.reservations) await Reservation.deleteMany({}); await Reservation.insertMany(data.reservations)
-    if (data.revenues) await Revenue.deleteMany({}); await Revenue.insertMany(data.revenues)
-    if (data.reviews) await Review.deleteMany({}); await Review.insertMany(data.reviews)
-    if (data.messages) await Message.deleteMany({}); await Message.insertMany(data.messages)
-    if (data.staff) await Staff.deleteMany({}); await Staff.insertMany(data.staff)
-    if (data.roles) await Role.deleteMany({}); await Role.insertMany(data.roles)
-    if (data.housekeeping) await Housekeeping.deleteMany({}); await Housekeeping.insertMany(data.housekeeping)
-    if (data.maintenance) await Maintenance.deleteMany({}); await Maintenance.insertMany(data.maintenance)
+    if (data.hotels) { await Hotel.deleteMany({}); await Hotel.insertMany(data.hotels) }
+    if (data.reservations) { await Reservation.deleteMany({}); await Reservation.insertMany(data.reservations) }
+    if (data.revenues) { await Revenue.deleteMany({}); await Revenue.insertMany(data.revenues) }
+    if (data.reviews) { await Review.deleteMany({}); await Review.insertMany(data.reviews) }
+    if (data.messages) { await Message.deleteMany({}); await Message.insertMany(data.messages) }
+    if (data.staff) { await Staff.deleteMany({}); await Staff.insertMany(data.staff) }
+    if (data.roles) { await Role.deleteMany({}); await Role.insertMany(data.roles) }
+    if (data.housekeeping) { await Housekeeping.deleteMany({}); await Housekeeping.insertMany(data.housekeeping) }
+    if (data.maintenance) { await Maintenance.deleteMany({}); await Maintenance.insertMany(data.maintenance) }
     res.json({ success: true, message: 'Backup restored successfully' })
   } catch (error) {
     console.error('restoreBackup error:', error?.message || error)

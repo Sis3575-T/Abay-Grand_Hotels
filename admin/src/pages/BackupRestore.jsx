@@ -52,7 +52,8 @@ const BackupRestore = () => {
   const downloadBackup = async (backup) => {
     try {
       const r = await axios.get(backendUrl + `/api/backup/download/${backup._id}`, { headers: getAuthHeaders(), responseType: 'blob' })
-      const url = URL.createObjectURL(new Blob([JSON.stringify(r.data, null, 2)], { type: 'application/json' }))
+      const blob = new Blob([r.data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = backup.filename || `backup-${backup._id}.json`

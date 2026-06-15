@@ -28,7 +28,16 @@ async function resolveConnectionUri(uri) {
     const afterAt = uri.includes('@') ? uri.split('@')[1] : uri.replace('mongodb+srv://', '')
     const hostname = afterAt.split('/')[0].split('?')[0].split(',')[0]
 
-    const srvRecords = await resolveSrvWithPublicDns(hostname)
+    let srvRecords
+    try {
+        srvRecords = await resolveSrvWithPublicDns(hostname)
+    } catch (err) {
+        console.warn(
+            `SRV resolution via public DNS failed for ${hostname}: ${err?.message || err}. Falling back to original URI.`
+        )
+        return uri
+    }
+
     const hosts = srvRecords.map((s) => `${s.name}:${s.port}`).join(',')
 
     const dbName =
@@ -63,6 +72,9 @@ const connectDB = async () => {
         globalThis.dbClient = { type: 'mongoose', client: mongoose }
     } catch (err) {
         console.error('MongoDB connection error:', err.message)
+        if (err?.message?.includes('SRV resolution failed')) {
+            console.error(`SRV resolution failed for host in MONGODB_URI. Check your MONGODB_URI in backend/.env. Masked URI: ${maskUri(uri)}`)
+        }
 
         if (process.env.DATA_API_URL && process.env.DATA_API_KEY) {
             globalThis.dbClient = { type: 'dataApi', client: dataApi }

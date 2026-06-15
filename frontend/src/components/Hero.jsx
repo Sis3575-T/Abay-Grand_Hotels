@@ -7,12 +7,13 @@ const Hero = () => {
   const hotelName = settings?.hotelName || 'DELUXE HOTELS'
   const tagline = settings?.tagline || settings?.description?.split('.')[0] || 'Where Luxury Meets Comfort'
   const heroButtonText = settings?.heroButtonText || 'BOOK YOUR STAY'
+  const heroBg = settings?.heroImage || bgImage
   const scrollToRooms = () => {
     const el = document.getElementById('rooms-section')
     if (el) el.scrollIntoView({ behavior: 'smooth' })
   }
   return (
-    <div className='relative h-[100vh] w-full bg-cover bg-center bg-no-repeat'style={{backgroundImage:`url(${bgImage})`}}>
+    <div className='relative h-[100vh] w-full bg-cover bg-center bg-no-repeat'style={{backgroundImage:`url(${heroBg})`}}>
       <div className='absolute inset-0 bg-gray-900 opacity-30 z-10'>
       
       </div>

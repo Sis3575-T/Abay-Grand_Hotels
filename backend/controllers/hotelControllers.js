@@ -6,36 +6,36 @@ const uploadImages = async (files) => {
 	const urls = [];
 	for (const file of files) {
 		if (!file?.path) continue;
-		const result = await cloudinary.uploader.upload(file.path, { resource_type: 'image' });
-		const url = result?.secure_url || result?.secureUrl;
-		if (url) urls.push(url);
+		try {
+			const result = await cloudinary.uploader.upload(file.path, { resource_type: 'image' });
+			const url = result?.secure_url || result?.secureUrl;
+			if (url) urls.push(url);
+		} catch (e) {
+			console.error('Image upload failed for', file.path, e?.message || e);
+		}
 	}
 	return urls;
 };
 
 const addHotel = async (req, res) => {
 	try {
-		const { name, price, description, roomType, capacity, available } = req.body;
+		const { name, price, description, roomType, capacity, available, status } = req.body;
 		const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
 
-		if (!files.length) {
-			return res.status(400).json({ success: false, message: 'At least one image is required (form field name: "images")' });
-		}
+		const uploaded = files.length ? await uploadImages(files) : [];
 
-		const uploaded = await uploadImages(files);
-		if (!uploaded.length) {
-			return res.status(400).json({ success: false, message: 'Failed to upload images' });
-		}
+		const roomStatus = status || (available === 'false' || available === false ? 'inactive' : 'available')
 
 		const hotelData = {
 			name,
 			description,
 			price: Number(price) || 0,
-			image: uploaded[0],
+			image: uploaded[0] || '',
 			images: uploaded,
 			roomType: roomType || 'Standard',
 			capacity: Number(capacity) || 2,
-			available: available === 'true' || available === true,
+			available: roomStatus === 'available',
+			status: roomStatus,
 			date: Date.now()
 		};
 
@@ -60,7 +60,7 @@ const listHotel = async (req, res) => {
 
 const editHotel = async (req, res) => {
 	try {
-		const { id, name, price, description, roomType, capacity, available } = req.body;
+		const { id, name, price, description, roomType, capacity, available, status } = req.body;
 		if (!id) return res.status(400).json({ success: false, message: 'Room id is required' });
 
 		const updateData = {};
@@ -70,6 +70,12 @@ const editHotel = async (req, res) => {
 		if (roomType) updateData.roomType = roomType;
 		if (capacity) updateData.capacity = Number(capacity);
 		if (available !== undefined) updateData.available = available === 'true' || available === true;
+		if (status) {
+			updateData.status = status;
+			updateData.available = status === 'available';
+		} else if (available !== undefined) {
+			updateData.status = updateData.available ? 'available' : 'inactive';
+		}
 
 		const files = req.files?.length ? req.files : (req.file ? [req.file] : []);
 		if (files.length) {
@@ -124,9 +130,10 @@ const getAvailableRooms = async (req, res) => {
     if (checkin >= checkout) {
       return res.status(400).json({ success: false, message: 'Check-out must be after check-in' })
     }
-    const allRooms = await hotelModel.find({})
+    const allRooms = await hotelModel.find({ status: { $ne: 'inactive' } })
     const availableRooms = []
     for (const room of allRooms) {
+      if (room.status === 'maintenance') continue
       const overlapping = await getOverlappingReservations(
         room._id.toString(), checkin, checkout, null, room.name
       )

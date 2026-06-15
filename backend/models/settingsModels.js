@@ -31,6 +31,7 @@ const settingsSchema = new mongoose.Schema({
   currency: { type: String, default: 'ETB' },
   taxRate: { type: String, default: '15' },
   logo: { type: String, default: '' },
+  heroImage: { type: String, default: '' },
 })
 
 const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema)

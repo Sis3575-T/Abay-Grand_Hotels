@@ -8,6 +8,6 @@ const settingsRouter = express.Router()
 
 settingsRouter.get('/', adminAuth, getSettings)
 settingsRouter.get('/public', getPublicSettings)
-settingsRouter.put('/update', adminAuth, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'aboutImage', maxCount: 1 }]), updateSettings)
+settingsRouter.put('/update', adminAuth, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'aboutImage', maxCount: 1 }, { name: 'heroImage', maxCount: 1 }]), updateSettings)
 
 export default settingsRouter

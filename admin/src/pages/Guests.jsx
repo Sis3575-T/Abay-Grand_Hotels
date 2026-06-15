@@ -34,7 +34,7 @@ const Guests = () => {
   const columns = [
     { header: '#', render: (_, idx) => (
       <span className="w-7 h-7 rounded flex items-center justify-center text-xs font-bold" style={{ background: 'rgba(37,99,235,0.1)', color: '#2563EB', display: 'inline-flex' }}>
-        {idx + 1}
+        {idx != null ? idx + 1 : ''}
       </span>
     )},
     { header: 'Guest Name', accessor: 'name', sortable: true, render: (g) => (

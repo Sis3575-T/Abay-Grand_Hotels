@@ -1,10 +1,11 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import Button from './Button'
 
 const ConfirmDialog = ({ open, onClose, onConfirm, title = 'Confirm', message = 'Are you sure?', confirmLabel = 'Delete', loading = false, variant = 'danger' }) => {
   if (!open) return null
 
-  return (
+  const dialog = (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="w-full max-w-sm mx-auto fade-in-up p-6"
@@ -24,6 +25,12 @@ const ConfirmDialog = ({ open, onClose, onConfirm, title = 'Confirm', message = 
       </div>
     </div>
   )
+
+  try {
+    return createPortal(dialog, document.body)
+  } catch {
+    return dialog
+  }
 }
 
 export default ConfirmDialog
