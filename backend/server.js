@@ -67,8 +67,6 @@ connectDB().then(() => {
   mongoose.connection.once('connected', seedAdmin)
 })
 
-const isProduction = process.env.NODE_ENV === 'production'
-
 const allowedOrigins = [
   'http://localhost:4000',
   'http://localhost:3000',
@@ -80,26 +78,16 @@ const allowedOrigins = [
   process.env.ADMIN_URL,
 ].filter(Boolean)
 
-const corsOptions = isProduction
-  ? {
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true)
-        if (allowedOrigins.includes(origin)) return callback(null, true)
-        if (origin.endsWith('.vercel.app')) return callback(null, true)
-        if (origin.endsWith('.onrender.com')) return callback(null, true)
-        if (origin.endsWith('.netlify.app')) return callback(null, true)
-        callback(null, true) // allow all in production too
-      },
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'token'],
-    }
-  : {
-      origin: allowedOrigins,
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'token'],
-    }
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    callback(null, true)
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'token'],
+}
 
 app.use(cors(corsOptions))
 
