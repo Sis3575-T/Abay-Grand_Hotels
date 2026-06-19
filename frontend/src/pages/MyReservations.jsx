@@ -78,7 +78,7 @@ const MyReservations = () => {
       }
       setSearched(true)
     } catch {
-      setError('Failed to fetch reservations. Please try again.')
+      setError('Failed to fetch reservations. The server may be waking up — please wait a moment and try again.')
       setReservations([])
     } finally {
       setLoading(false)

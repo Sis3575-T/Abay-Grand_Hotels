@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect } from "react";
 import axios from 'axios'
-import { roomData } from '../assets/asset'
 import { backendUrl } from "../App";
 
 export const RoomContext = createContext()
@@ -17,11 +16,10 @@ const RoomContextProvider = ({children})=>{
                     setRooms(res.data.hotels)
                 } else {
                     setError('Failed to load rooms from server')
-                    setRooms(roomData)
                 }
             } catch (err) {
-                console.log('Failed to fetch rooms from API, using local data', err)
-                setRooms(roomData)
+                console.log('Failed to fetch rooms from API', err)
+                setError('Failed to load rooms. Please try again later.')
             } finally {
                 setLoading(false)
             }
@@ -31,7 +29,7 @@ const RoomContextProvider = ({children})=>{
         }, [])
 
         return(
-                <RoomContext.Provider value={{ rooms, loading, error }}>
+                <RoomContext.Provider value={{ rooms, loading, error, refetch: fetchRooms }}>
                         {children}
                 </RoomContext.Provider>
         )
