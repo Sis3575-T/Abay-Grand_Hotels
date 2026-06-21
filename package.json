@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "db:diag": "node backend/scripts/db-diagnostics.js"
+    "db:diag": "node backend/scripts/db-diagnostics.js",
+    "generate-favicons": "node scripts/generate-favicons-standalone.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",

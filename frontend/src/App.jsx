@@ -17,6 +17,10 @@ const App = () => {
   const location = useLocation()
 
   useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+
+  useEffect(() => {
     if (location.pathname === '/payment/result') {
       sessionStorage.removeItem('chapa_tx_ref')
       sessionStorage.removeItem('chapa_booking_id')

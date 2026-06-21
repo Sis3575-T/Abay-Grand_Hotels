@@ -37,6 +37,14 @@ const HotelList = () => {
                     <h3 className='text-2xl font-semibold text-gray-800 mb-1'>{name}</h3>
                     <p className='text-lg font-bold text-gray-800'>${price}</p>
                   </div>
+                  <div className='px-5 pb-3'>
+                    <Link
+                      to={`/room/${_id}`}
+                      className='block w-full bg-lime-600 text-white text-center font-bold py-2 px-4 rounded hover:bg-lime-700 transition-colors duration-200'
+                    >
+                      Book Now
+                    </Link>
+                  </div>
                   <div className='grid grid-cols-2 gap-4 text-base text-gray-700'>
                     <div className='flex items-center gap-2'>
                       <FaUserFriends className='text-gray-600' />
