@@ -56,11 +56,11 @@ const formatDate = (d) => {
 const AuditEntry = ({ label, data }) => {
   if (!data || !data.userId) return null
   return (
-    <div className="flex items-start justify-between py-3 border-b" style={{ borderColor: '#E5E7EB' }}>
-      <span className="text-xs font-medium" style={{ color: '#6B7280', minWidth: '110px' }}>{label}</span>
+    <div className="flex items-start justify-between py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+      <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)', minWidth: '110px' }}>{label}</span>
       <div className="text-right">
-        <p className="text-xs font-semibold" style={{ color: '#1E293B' }}>{data.name}</p>
-        <p className="text-[10px]" style={{ color: '#94A3B8' }}>{data.role} &middot; {formatDate(data.actionDate)}</p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{data.name}</p>
+        <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{data.role} &middot; {formatDate(data.actionDate)}</p>
       </div>
     </div>
   )
@@ -513,18 +513,18 @@ const Reservation = () => {
                 ['Payment Status', selected.paymentStatus || 'Pending'],
                 ['Status', selected.status || 'Pending'],
               ].map(([label, value]) => (
-                <div key={label} className="flex items-start justify-between py-3 border-b" style={{ borderColor: '#E5E7EB' }}>
-                  <span className="text-sm font-medium" style={{ color: '#6B7280' }}>{label}</span>
-                  <span className="text-sm font-semibold" style={{ color: '#1E293B' }}>
+                <div key={label} className="flex items-start justify-between py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                     {label === 'Payment Status' ? paymentBadge(value) : (value || '\u2014')}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 pt-4 border-t" style={{ borderColor: '#E5E7EB' }}>
-              <h4 className="text-sm font-bold mb-1" style={{ color: '#1E293B' }}>Reservation Activity</h4>
-              <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>Audit trail of all actions on this reservation</p>
+            <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+              <h4 className="text-sm font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Reservation Activity</h4>
+              <p className="text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Audit trail of all actions on this reservation</p>
               <AuditEntry label="Created By" data={selected.createdBy} />
               <AuditEntry label="Approved By" data={selected.approvedBy} />
               <AuditEntry label="Rejected By" data={selected.rejectedBy} />
@@ -542,7 +542,7 @@ const Reservation = () => {
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Reservation" width="max-w-lg">
         <div className="flex flex-col" style={{ gap: '16px' }}>
           <div>
-            <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>
+            <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
               Guest Name <span style={{ color: '#DC2626' }}>*</span>
             </label>
             <input className={`input-field ${errors.name ? 'error' : ''}`} value={formName} onChange={e => setFormName(e.target.value)} placeholder="Enter guest name" />
@@ -550,19 +550,19 @@ const Reservation = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '16px' }}>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>
+              <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Email <span style={{ color: '#DC2626' }}>*</span>
               </label>
               <input className={`input-field ${errors.email ? 'error' : ''}`} value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="guest@email.com" />
               {errors.email && <p className="text-xs mt-1" style={{ color: '#DC2626' }}>{errors.email}</p>}
             </div>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>Phone</label>
+              <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>Phone</label>
               <input className="input-field" value={formPhone} onChange={e => setFormPhone(e.target.value)} placeholder="+251 911 000 000" />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>
+            <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
               Room <span style={{ color: '#DC2626' }}>*</span>
             </label>
             <input className={`input-field ${errors.room ? 'error' : ''}`} value={formRoom} onChange={e => setFormRoom(e.target.value)} placeholder="e.g. Deluxe Suite 201" />
@@ -570,14 +570,14 @@ const Reservation = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '16px' }}>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>
+              <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Check-in <span style={{ color: '#DC2626' }}>*</span>
               </label>
               <input type="date" className={`input-field ${errors.checkin ? 'error' : ''}`} value={formCheckin} onChange={e => setFormCheckin(e.target.value)} />
               {errors.checkin && <p className="text-xs mt-1" style={{ color: '#DC2626' }}>{errors.checkin}</p>}
             </div>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>
+              <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Check-out <span style={{ color: '#DC2626' }}>*</span>
               </label>
               <input type="date" className={`input-field ${errors.checkout ? 'error' : ''}`} value={formCheckout} onChange={e => setFormCheckout(e.target.value)} />
@@ -586,14 +586,14 @@ const Reservation = () => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: '16px' }}>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>
+              <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
                 Guests <span style={{ color: '#DC2626' }}>*</span>
               </label>
               <input type="number" min="1" className={`input-field ${errors.guests ? 'error' : ''}`} value={formGuests} onChange={e => setFormGuests(Number(e.target.value))} />
               {errors.guests && <p className="text-xs mt-1" style={{ color: '#DC2626' }}>{errors.guests}</p>}
             </div>
             <div>
-              <label className="block text-xs font-semibold" style={{ color: '#6B7280', marginBottom: '6px' }}>Payment Status</label>
+              <label className="block text-xs font-semibold" style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>Payment Status</label>
               <select className="input-field" value={formPaymentStatus} onChange={e => setFormPaymentStatus(e.target.value)}>
                 <option value="Pending">Pending</option>
                 <option value="Partially Paid">Partially Paid</option>
