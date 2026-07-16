@@ -21,16 +21,23 @@ const Navbar = () => {
       if (el) el.scrollIntoView({ behavior: 'smooth' })
     }
   }
+  const navigateHome = () => {
+    if (window.location.pathname !== '/') {
+      navigate('/')
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <div>
       <nav className='fixed top-0 left-0 w-full z-50 flex items-center justify-between p-[2rem] bg-black text-white'>
-        <Link to='/'>
-    <div>
-            <h2 className='font-bold text-2xl'>{first} <span className='text-lime-400'>{last}</span></h2>
+        <button onClick={navigateHome} className="bg-transparent border-none cursor-pointer">
+          <div>
+            <h2 className='font-bold text-2xl text-white'>{first} <span className='text-lime-400'>{last}</span></h2>
           </div>
-        </Link>
+        </button>
         <ul className='flex gap-8 items-center'>
-          <li><Link to="/" className='font-bold text-lg hover:text-lime-500'>HOME</Link></li>
+          <li><button onClick={navigateHome} className='bg-transparent border-none font-bold text-lg text-white hover:text-lime-500 cursor-pointer'>HOME</button></li>
           <li className='font-bold text-lg cursor-pointer hover:text-lime-500 ' onClick={() => scrollToSection('rooms-section')}>ROOMS</li>
           <li><Link to="/about" className='font-bold text-lg hover:text-lime-500'>ABOUT</Link></li>
           <li><Link to="/contact" className='font-bold text-lg hover:text-lime-500'>CONTACT</Link></li>

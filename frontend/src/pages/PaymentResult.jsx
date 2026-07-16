@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import axios from 'axios'
 import { backendUrl } from '../App'
@@ -31,50 +31,25 @@ const PaymentResult = () => {
   const [payment, setPayment] = useState(null)
   const [booking, setBooking] = useState(null)
 
-  const status = searchParams.get('status') || 'pending'
   const txRef = searchParams.get('tx_ref') || ''
   const bookingId = searchParams.get('booking_id') || ''
 
   useEffect(() => {
-    if (status === 'success') {
-      setResult({
-        status: 'success',
-        message: 'Payment confirmed! Your booking is confirmed.',
-      })
-      setVerifying(false)
-      if (txRef) {
-        axios.get(`${backendUrl}/api/payment/chapa-verify/${txRef}`)
-          .then(r => {
-            if (r.data?.success && r.data?.paid) {
-              setPayment(r.data.payment)
-              setBooking(r.data.booking)
-            }
-          })
-          .catch(() => {})
-      }
-    } else if (status === 'cancelled') {
-      setResult({
-        status: 'cancelled',
-        message: 'Payment was cancelled. Your booking is still pending — you can pay later from My Reservations.',
-      })
-      setVerifying(false)
-    } else if (status === 'error') {
-      setResult({
-        status: 'error',
-        message: 'An error occurred during payment processing. Please try again or contact support.',
-      })
-      setVerifying(false)
-    } else if (!txRef) {
+    if (!txRef && !bookingId) {
       setResult({
         status: 'pending',
         message: 'No transaction reference found. Check your reservations for status.',
       })
       setVerifying(false)
-    } else {
-      let cancelled = false
-      const verifyPayment = async () => {
-        try {
-          setVerifying(true)
+      return
+    }
+
+    let cancelled = false
+    const verifyPayment = async () => {
+      try {
+        setVerifying(true)
+
+        if (txRef) {
           const r = await axios.get(`${backendUrl}/api/payment/chapa-verify/${txRef}`)
           if (cancelled) return
 
@@ -85,28 +60,49 @@ const PaymentResult = () => {
             })
             setPayment(r.data.payment)
             setBooking(r.data.booking)
-          } else {
+            return
+          }
+
+          if (r.data?.payment) setPayment(r.data.payment)
+
+          const paid = r.data?.paid === true
+          if (paid === false) {
+            const s = r.data?.payment?.status || ''
+            if (s === 'Cancelled' || s === 'cancelled') {
+              setResult({
+                status: 'cancelled',
+                message: 'Payment was cancelled. Your booking is still pending — you can pay later from My Reservations.',
+              })
+              setPayment(r.data.payment)
+              return
+            }
             setResult({
               status: 'failed',
-              message: r.data?.message || 'Payment was not completed. Please try again.',
+              message: 'Payment was not completed. Please try again.',
             })
-            setPayment(r.data?.payment || null)
+            return
           }
-        } catch (err) {
-          if (!cancelled) {
-            setResult({
-              status: 'error',
-              message: 'Could not verify payment. Please check your reservations.',
-            })
-          }
-        } finally {
-          if (!cancelled) setVerifying(false)
         }
+
+        setResult({
+          status: 'pending',
+          message: txRef ? 'Checking payment status...' : 'No transaction reference found. Check your reservations for status.',
+        })
+      } catch (err) {
+        if (!cancelled) {
+          console.error('[PaymentResult] Verify error:', err?.response?.data || err?.message || err)
+          setResult({
+            status: 'error',
+            message: 'Unable to verify payment at this time. Please check your reservations for status.',
+          })
+        }
+      } finally {
+        if (!cancelled) setVerifying(false)
       }
-      verifyPayment()
-      return () => { cancelled = true }
     }
-  }, [status, txRef])
+    verifyPayment()
+    return () => { cancelled = true }
+  }, [txRef, bookingId])
 
   const iconMap = {
     success: { icon: MdCheckCircle, color: '#16A34A', bg: '#DCFCE7' },

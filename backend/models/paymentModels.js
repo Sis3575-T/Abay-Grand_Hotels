@@ -2,6 +2,8 @@ import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema({
   transactionId: { type: String, required: true, unique: true },
+  tx_ref: { type: String, default: '' },
+  transaction_id: { type: String, default: '' },
   bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Reservation', default: null },
   guestId: { type: String, default: '' },
   guestName: { type: String, required: true },
@@ -23,6 +25,7 @@ const paymentSchema = new mongoose.Schema({
     enum: ['Pending', 'Verification Required', 'Paid', 'Partially Paid', 'Failed', 'Refunded', 'Cancelled'],
     default: 'Pending'
   },
+  payment_status: { type: String, default: 'Pending' },
   referenceNumber: { type: String, default: '' },
   receipt: { type: String, default: '' },
   receiptFileType: { type: String, default: '' },
@@ -64,6 +67,7 @@ paymentSchema.index({ status: 1 })
 paymentSchema.index({ paymentMethod: 1 })
 paymentSchema.index({ createdAt: -1 })
 paymentSchema.index({ chapaTransactionId: 1 })
+paymentSchema.index({ transaction_id: 1 })
 
 const Payment = mongoose.models.Payment || mongoose.model('Payment', paymentSchema)
 export default Payment

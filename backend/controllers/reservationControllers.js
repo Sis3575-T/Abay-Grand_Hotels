@@ -659,6 +659,7 @@ const bookWithChapa = async (req, res) => {
     if (isMobileMoney) {
       isDirectCharge = true
       const dcType = getDirectChargeType(selectedChannel)
+      const frontendReturnUrl = `${paymentConfig.frontendUrl}/payment/result?tx_ref=${tx_ref}`
       const dcPayload = {
         type: dcType,
         amount: pricing.totalAmount,
@@ -669,7 +670,7 @@ const bookWithChapa = async (req, res) => {
         tx_ref,
         mobile: phone,
         callback_url: paymentConfig.chapaCallbackUrl,
-        return_url: paymentConfig.chapaReturnUrl,
+        return_url: frontendReturnUrl,
       }
 
       console.log('[bookWithChapa] Direct charge payload:', JSON.stringify(dcPayload, null, 2))
@@ -713,15 +714,20 @@ const bookWithChapa = async (req, res) => {
         })
       }
     } else {
+      payment.tx_ref = tx_ref
+
+      const frontendReturnUrl = `${paymentConfig.frontendUrl}/payment/result?tx_ref=${tx_ref}`
+      const nameParts = (name || '').trim().split(/\s+/)
       const chapaPayload = {
-        amount: pricing.totalAmount,
+        amount: String(pricing.totalAmount),
         currency: 'ETB',
         email: email || '',
-        first_name: name.split(' ')[0] || name,
-        last_name: name.split(' ').slice(1).join(' ') || '',
+        first_name: nameParts[0] || name || 'Guest',
+        last_name: nameParts.slice(1).join(' ') || nameParts[0] || 'Guest',
+        phone_number: phone || '',
         tx_ref,
         callback_url: paymentConfig.chapaCallbackUrl,
-        return_url: paymentConfig.chapaReturnUrl,
+        return_url: frontendReturnUrl,
         customization: {
           title: 'Hotel Booking',
           description: `Payment for ${roomName} - ${name}`,
@@ -729,10 +735,11 @@ const bookWithChapa = async (req, res) => {
       }
 
       if (Array.isArray(channels) && channels.length > 0) {
-        chapaPayload.options = { channels }
+        chapaPayload.channels = channels
       }
 
       console.log('[bookWithChapa] Chapa payload:', JSON.stringify(chapaPayload, null, 2))
+      console.log('[bookWithChapa] return_url:', frontendReturnUrl)
 
       try {
         chapaResult = await chapaInitialize(chapaPayload)
@@ -806,11 +813,9 @@ const bookWithChapa = async (req, res) => {
 
       return res.json({
         success: true,
-        message: 'Booking created. Redirecting to payment...',
-        reservation: newReservation,
-        payment: payment.toObject(),
-        checkoutUrl,
+        checkout_url: checkoutUrl,
         tx_ref,
+        bookingId: newReservation._id,
       })
     }
 
@@ -838,11 +843,13 @@ const bookWithChapa = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Payment request sent to your phone via ${selectedChannel}. Check your phone and complete the payment.`,
+      checkout_url: null,
       paymentType: 'direct_charge',
       channel: selectedChannel,
       tx_ref,
+      bookingId: newReservation._id,
       reference: directChargeRef,
+      message: `Payment request sent to your phone via ${selectedChannel}. Complete the payment on your phone.`,
     })
   } catch (error) {
     console.error('[bookWithChapa] Unhandled error:', error?.message || error)

@@ -1,6 +1,20 @@
 import crypto from 'crypto'
 import paymentConfig from '../config/payment.js'
 
+let fetcher
+try {
+  fetcher = globalThis.fetch?.bind(globalThis)
+} catch { /* ignore */ }
+if (!fetcher) {
+  try {
+    const { default: nodeFetch } = await import('node-fetch')
+    fetcher = nodeFetch
+  } catch {
+    console.warn('[chapa] No fetch implementation available. Install node-fetch for Node < 18.')
+    fetcher = async () => { throw new Error('fetch not available') }
+  }
+}
+
 const CHAPA_API = paymentConfig.chapaApiUrl
 const CHAPA_WEBHOOK_SECRET = paymentConfig.chapaWebhookSecret
 const MAX_RETRIES = 2
@@ -48,7 +62,7 @@ async function chapaRequest(endpoint, options = {}) {
       console.log(`[chapa] Request headers: Authorization: Bearer ${paymentConfig.chapaSecretKey ? paymentConfig.chapaSecretKey.substring(0, 12) + '...' : 'NOT SET'}`)
       if (bodyPreview) console.log(`[chapa] Request body:\n${bodyPreview}`)
 
-      const res = await fetch(url, {
+      const res = await fetcher(url, {
         ...options,
         headers: { ...chapaHeaders(), ...options.headers },
       })
@@ -99,7 +113,7 @@ async function chapaRequest(endpoint, options = {}) {
   }
 }
 
-async function initializeTransaction({ amount, currency, email, first_name, last_name, tx_ref, callback_url, return_url, customization, channels }) {
+async function initializeTransaction({ amount, currency, email, first_name, last_name, phone_number, tx_ref, callback_url, return_url, customization, channels }) {
   const configErrors = paymentConfig.validate()
   if (configErrors.length > 0) {
     console.error('[chapa:initializeTransaction] Configuration errors:', configErrors)
@@ -113,8 +127,9 @@ async function initializeTransaction({ amount, currency, email, first_name, last
     amount: String(amount),
     currency: currency || 'ETB',
     email: email || '',
-    first_name: first_name || '',
-    last_name: last_name || '',
+    first_name: first_name || 'Guest',
+    last_name: last_name || 'Guest',
+    phone_number: phone_number || '',
     tx_ref,
     callback_url: callback_url || paymentConfig.chapaCallbackUrl,
     return_url: return_url || paymentConfig.chapaReturnUrl,

@@ -19,13 +19,13 @@ services:
       - key: JWT_SECRET
         value: demo
       - key: CHAPA_SECRET_KEY
-        value: CHASECK_TEST-rEaRFW3Nzc7lQCXM3xwmYmqKLijltRUb
+        value: CHASECK_TEST-ttCMGESjty3tmzBRPRUYk9gu5O8Xf8sm
       - key: CHAPA_PUBLIC_KEY
-        value: CHAPUBK_TEST-SvTl96p9pX9V46wF7CDalK4lQ3K9p1fS
+        value: CHAPUBK_TEST-DQFH3iHjMZeA5LFDP2OOcZNf7LrRYHVq
       - key: CHAPA_ENCRYPTION_KEY
-        value: iPf32TXeZEvwVb16fILsQHiA
+        value: 0Or6a5iiGSwKM8TVGejDOBNp
       - key: CHAPA_WEBHOOK_SECRET
-        value: CHASECK_TEST_6D0FA9C1A51AFB40AAB8D8C8C3601A6B
+        value: CHASECK_TEST-ttCMGESjty3tmzBRPRUYk9gu5O8Xf8sm
       - key: CHAPA_API_URL
         value: https://api.chapa.co/v1
       # IMPORTANT: Set MONGODB_URI in Render Dashboard → Environment

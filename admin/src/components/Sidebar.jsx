@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   MdDashboard, MdHotel, MdEventNote, MdPeople, MdAttachMoney,
   MdStar, MdMessage, MdSettings, MdSync, MdLogout, MdMenu, MdClose,
-  MdChevronLeft
+  MdChevronLeft, MdPerson
 } from 'react-icons/md'
 import { useTheme, useSettings } from '../App'
 
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/revenue',     icon: MdAttachMoney, label: 'Revenue' },
   { to: '/reviews',     icon: MdStar,        label: 'Reviews' },
   { to: '/messages',    icon: MdMessage,     label: 'Messages' },
+  { to: '/profile',     icon: MdPerson,      label: 'Profile' },
   { to: '/settings',    icon: MdSettings,    label: 'Settings' },
   { to: '/sync',        icon: MdSync,        label: 'DB Sync' },
 ]

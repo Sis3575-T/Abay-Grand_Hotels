@@ -6,6 +6,7 @@ import { FaWifi, FaTv, FaUtensils, FaSwimmingPool, FaConciergeBell } from 'react
 
 const PAYMENT_METHODS = [
   { id: 'pay_at_hotel', name: 'Pay at Hotel', description: 'Pay when you arrive' },
+  { id: 'Chapa', name: 'Pay with Chapa', description: 'Pay online via Chapa (Telebirr, CBE Birr, Visa, etc.)' },
 ]
 
 const HotelDetails = () => {
@@ -143,6 +144,31 @@ const HotelDetails = () => {
         setNotification({ type: 'error', message: availCheck.data.message || 'This room is not available for the selected dates.' })
         return
       }
+      if (paymentMethod === 'Chapa') {
+        const response = await axios.post(`${backendUrl}/api/reservation/book-with-chapa`, {
+          ...formData,
+          paymentMethod: 'Chapa',
+          channels: [],
+        })
+        if (response.data?.success && response.data?.checkout_url) {
+          sessionStorage.setItem('chapa_tx_ref', response.data.tx_ref || '')
+          sessionStorage.setItem('chapa_booking_id', response.data.bookingId || '')
+          sessionStorage.setItem('chapa_redirect_time', Date.now().toString())
+          window.location.href = response.data.checkout_url
+          return
+        }
+        if (response.data?.success && response.data?.paymentType === 'direct_charge') {
+          sessionStorage.setItem('chapa_tx_ref', response.data.tx_ref || '')
+          sessionStorage.setItem('chapa_booking_id', response.data.bookingId || '')
+          setNotification({ type: 'info', message: response.data.message || 'Check your phone to complete payment.' })
+          setFormData(prev => ({
+            ...prev, name: '', email: '', phone: '', checkin: '', checkout: '', guests: 1
+          }))
+          return
+        }
+        setNotification({ type: 'error', message: response.data?.message || 'Payment initialization failed. Please try again.' })
+        return
+      }
       const response = await axios.post(`${backendUrl}/api/reservation/create`, formData)
       if (response.data?.success) {
         setNotification({ type: 'success', message: 'Reservation booked successfully! You can pay at the hotel.' })
@@ -161,7 +187,8 @@ const HotelDetails = () => {
       }
     } catch (error) {
       console.error('Booking error:', error)
-      const msg = error.response?.data?.message || 'Error occurred while booking. Please try again.'
+      console.error('Error response:', error.response?.data)
+      const msg = error.response?.data?.message || error.message || 'Error occurred while booking. Please try again.'
       setNotification({ type: 'error', message: msg })
     } finally {
       setSubmitting(false)
@@ -301,6 +328,33 @@ const HotelDetails = () => {
                   <option key={i + 1} value={i + 1}>{i + 1} Guest{i > 0 ? 's' : ''}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold mb-1">Payment Method</label>
+              <div className="space-y-2">
+                {PAYMENT_METHODS.map((pm) => (
+                  <label
+                    key={pm.id}
+                    className={`flex items-center gap-3 p-2.5 border rounded cursor-pointer transition-colors ${
+                      paymentMethod === pm.id ? 'border-lime-500 bg-lime-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={pm.id}
+                      checked={paymentMethod === pm.id}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="accent-lime-600"
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{pm.name}</p>
+                      <p className="text-xs text-gray-500">{pm.description}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {availability.checking && (

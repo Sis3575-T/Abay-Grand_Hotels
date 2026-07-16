@@ -26,6 +26,7 @@ import CustomerHistory from './pages/CustomerHistory.jsx'
 import BackupRestore from './pages/BackupRestore.jsx'
 import SyncDatabase from './pages/SyncDatabase.jsx'
 import Notifications from './pages/Notifications.jsx'
+import Profile from './pages/Profile.jsx'
 // import Payments from './pages/Payments.jsx'
 
 export const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -190,6 +191,7 @@ const App = () => {
                   <Route path="/customer-history" element={token ? <ProtectedRoute setToken={setToken}><CustomerHistory /></ProtectedRoute> : <Navigate to="/admin/login" replace />} />
                   <Route path="/backup" element={token ? <ProtectedRoute setToken={setToken}><BackupRestore /></ProtectedRoute> : <Navigate to="/admin/login" replace />} />
                   <Route path="/sync" element={token ? <ProtectedRoute setToken={setToken}><SyncDatabase /></ProtectedRoute> : <Navigate to="/admin/login" replace />} />
+                  <Route path="/profile" element={token ? <ProtectedRoute setToken={setToken}><Profile /></ProtectedRoute> : <Navigate to="/admin/login" replace />} />
                   <Route path="/notifications" element={token ? <ProtectedRoute setToken={setToken}><Notifications /></ProtectedRoute> : <Navigate to="/admin/login" replace />} />
                   {/* <Route path="/payments" element={token ? <ProtectedRoute setToken={setToken}><Payments /></ProtectedRoute> : <Navigate to="/admin/login" replace />} /> */}
                   <Route path="*" element={<Navigate to={token ? '/dashboard' : '/admin/login'} replace />} />

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
+import { v2 as cloudinary } from 'cloudinary'
 import Admin from '../models/adminModel.js'
 
 const loginRateLimitMap = new Map()
@@ -92,7 +93,7 @@ export const adminLogin = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: admin._id, email: admin.email, role: admin.role },
+      { id: admin._id, email: admin.email, role: admin.role, photo: admin.photo || '' },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     )
@@ -106,6 +107,7 @@ export const adminLogin = async (req, res) => {
         id: admin._id,
         name: admin.name,
         email: admin.email,
+        photo: admin.photo || '',
         role: admin.role,
         forcePasswordChange: admin.forcePasswordChange,
       }
@@ -117,7 +119,43 @@ export const adminLogin = async (req, res) => {
 }
 
 export const verifyToken = async (req, res) => {
-  res.json({ success: true, admin: req.admin })
+  try {
+    const admin = await Admin.findById(req.admin.id).select('-password')
+    res.json({ success: true, admin: admin || req.admin })
+  } catch {
+    res.json({ success: true, admin: req.admin })
+  }
+}
+
+export const getProfile = async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.admin.id).select('-password')
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' })
+    res.json({ success: true, admin })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
+}
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { name, email } = req.body
+    const updateData = {}
+    if (name) updateData.name = name
+    if (email) updateData.email = email
+
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, { resource_type: 'image' })
+      if (result?.secure_url) updateData.photo = result.secure_url
+    }
+
+    const admin = await Admin.findByIdAndUpdate(req.admin.id, updateData, { new: true }).select('-password')
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' })
+
+    res.json({ success: true, admin, message: 'Profile updated successfully' })
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message })
+  }
 }
 
 export const setupAdmin = async (req, res) => {

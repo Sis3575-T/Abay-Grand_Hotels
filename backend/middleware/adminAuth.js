@@ -21,6 +21,7 @@ const adminAuth = async (req, res, next) => {
       id: admin._id,
       name: admin.name,
       email: admin.email,
+      photo: admin.photo || '',
       role: admin.role,
     }
     next()

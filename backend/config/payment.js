@@ -3,7 +3,7 @@ const paymentConfig = {
     return process.env.BACKEND_URL || 'http://localhost:4000'
   },
   get frontendUrl() {
-    return process.env.FRONTEND_URL || 'http://localhost:5173'
+    return process.env.FRONTEND_URL || 'http://localhost:5175'
   },
   get chapaApiUrl() {
     return process.env.CHAPA_API_URL || 'https://api.chapa.co/v1'

@@ -45,6 +45,7 @@ const Topbar = ({ setToken }) => {
   const [showNotif, setShowNotif] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [notifLoading, setNotifLoading] = useState(true)
+  const [adminProfile, setAdminProfile] = useState(null)
   const notifRef = useRef(null)
   const profileRef = useRef(null)
   const headerRef = useRef(null)
@@ -66,6 +67,16 @@ const Topbar = ({ setToken }) => {
     const interval = setInterval(fetchNotifications, 30000)
     return () => clearInterval(interval)
   }, [fetchNotifications])
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const r = await axios.get(backendUrl + '/api/user/profile', { headers: getAuthHeaders() })
+        if (r.data?.success) setAdminProfile(r.data.admin)
+      } catch {}
+    }
+    fetchProfile()
+  }, [])
 
   useEffect(() => {
     const setVar = () => {
@@ -263,14 +274,18 @@ const Topbar = ({ setToken }) => {
             style={{ background: 'var(--bg-subtle)', border: '1.5px solid var(--border)' }}
           >
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold overflow-hidden"
               style={{ background: 'linear-gradient(135deg, #1E293B, #334155)', color: '#D4AF37' }}
             >
-              A
+              {adminProfile?.photo ? (
+                <img src={adminProfile.photo} alt="" className="w-full h-full object-cover" />
+              ) : (
+                (adminProfile?.name || 'A')[0].toUpperCase()
+              )}
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-xs font-semibold leading-none" style={{ color: 'var(--text-primary)' }}>Admin</p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>Super Admin</p>
+              <p className="text-xs font-semibold leading-none" style={{ color: 'var(--text-primary)' }}>{adminProfile?.name || 'Admin'}</p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{adminProfile?.role || 'Admin'}</p>
             </div>
           </button>
           {showProfile && (
@@ -279,11 +294,11 @@ const Topbar = ({ setToken }) => {
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
             >
               <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-subtle)' }}>
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{settings?.hotelName || 'Abay Grand Hotel'}</p>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{settings?.email || 'admin@abaygrnd.com'}</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{adminProfile?.name || settings?.hotelName || 'Abay Grand Hotel'}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{adminProfile?.email || settings?.email || 'admin@abaygrnd.com'}</p>
               </div>
               {[
-                { label: 'My Profile', onClick: () => {} },
+                { label: 'My Profile', onClick: () => { setShowProfile(false); navigate('/profile') } },
                 { label: 'Account Settings', onClick: () => { setShowProfile(false); navigate('/settings') } },
                 { label: 'Help & Support', onClick: () => {} },
               ].map(item => (
