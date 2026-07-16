@@ -65,10 +65,10 @@ const createReservation = async (req, res) => {
   try {
     const { name, email, phone, checkin, checkout, guests, roomName, roomId } = req.body
     if (!name || !email || !checkin || !checkout || !guests || !roomName) {
-      return res.json({ success: false, message: 'All fields are required' })
+      return res.status(400).json({ success: false, message: 'All fields are required' })
     }
     if (checkin >= checkout) {
-      return res.json({ success: false, message: 'Check-out date must be after check-in date' })
+      return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' })
     }
 
     let resolvedRoomId = roomId ? String(roomId) : ''
@@ -77,12 +77,12 @@ const createReservation = async (req, res) => {
       if (hotel) resolvedRoomId = hotel._id.toString()
     }
     if (!resolvedRoomId) {
-      return res.json({ success: false, message: 'Room ID is required for booking validation' })
+      return res.status(400).json({ success: false, message: 'Room ID is required for booking validation' })
     }
 
     const overlapping = await getOverlappingReservations(resolvedRoomId, checkin, checkout, null, roomName)
     if (overlapping.length > 0) {
-      return res.json({
+      return res.status(409).json({
         success: false,
         message: 'This room is already booked for the selected dates. Please choose different dates or another room.',
       })
@@ -90,18 +90,18 @@ const createReservation = async (req, res) => {
 
     const hotel = await hotelModel.findById(resolvedRoomId)
     if (!hotel) {
-      return res.json({ success: false, message: 'Room not found' })
+      return res.status(404).json({ success: false, message: 'Room not found' })
     }
     if (hotel.status === 'inactive') {
-      return res.json({ success: false, message: 'This room is inactive and cannot be booked.' })
+      return res.status(400).json({ success: false, message: 'This room is inactive and cannot be booked.' })
     }
     if (hotel.status === 'maintenance') {
-      return res.json({ success: false, message: 'This room is under maintenance and cannot be booked.' })
+      return res.status(400).json({ success: false, message: 'This room is under maintenance and cannot be booked.' })
     }
 
     const pricing = calculateBookingPrice(hotel.price, checkin, checkout)
     if (pricing.nights <= 0) {
-      return res.json({ success: false, message: 'Invalid booking dates' })
+      return res.status(400).json({ success: false, message: 'Invalid booking dates' })
     }
 
     const clientInfo = getClientInfo(req.body)
@@ -135,18 +135,18 @@ const createReservation = async (req, res) => {
 
     res.json({ success: true, message: 'reservation created successfully', reservation: newReservation })
   } catch (error) {
-    console.log(error)
-    res.json({ success: false, message: 'error creating reservation' })
+    console.error('createReservation error:', error?.message || error)
+    res.status(500).json({ success: false, message: 'error creating reservation' })
   }
 }
 
 const getAllReservation = async (req, res) => {
   try {
-    const reservations = await Reservation.find()
+    const reservations = await Reservation.find().sort({ createdAt: -1 })
     res.json(reservations)
   } catch (error) {
     console.log(error)
-    res.json({ message: 'error fetching reservation' })
+    res.status(500).json({ success: false, message: 'error fetching reservation' })
   }
 }
 

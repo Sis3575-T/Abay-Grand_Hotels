@@ -29,7 +29,7 @@ const reservationSchema = new mongoose.Schema({
   checkedOutBy: { type: auditSubSchema, default: () => ({}) },
   cancelledBy: { type: auditSubSchema, default: () => ({}) },
   updatedBy: { type: auditSubSchema, default: () => ({}) },
-})
+}, { timestamps: true })
 
 reservationSchema.index({ email: 1 })
 reservationSchema.index({ roomId: 1 })

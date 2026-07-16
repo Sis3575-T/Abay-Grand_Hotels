@@ -124,10 +124,17 @@ const Reservation = () => {
         axios.get(backendUrl + '/api/reservation/get', { headers: getAuthHeaders() }),
         axios.get(backendUrl + '/api/hotel/list').catch(() => ({ data: { hotels: [] } })),
       ])
-      setReservations(Array.isArray(resRes.data) ? resRes.data : [])
+      const data = resRes.data
+      if (data && typeof data === 'object' && !Array.isArray(data) && data.success === false) {
+        setError(data.message || 'Failed to load reservations')
+        setReservations([])
+      } else {
+        setReservations(Array.isArray(data) ? data : [])
+      }
       setRooms(roomsRes.data?.hotels || [])
-    } catch {
-      setError('Failed to load reservations')
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to load reservations'
+      setError(msg)
       setReservations([])
     } finally {
       setLoading(false)
