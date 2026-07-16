@@ -45,35 +45,59 @@ const PaymentResult = () => {
     }
 
     let cancelled = false
+    const verifyWithRetry = async (txRef, retries = 4) => {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        if (cancelled) return null
+        try {
+          const r = await axios.get(`${backendUrl}/api/payment/chapa-verify/${txRef}`, { timeout: 15000 })
+          if (cancelled) return null
+
+          if (r.data?.success && r.data?.paid) return r.data
+          if (r.data?.paid === false && !r.data?.pending) return r.data
+
+          if (attempt < retries) {
+            console.log(`[PaymentResult] Not confirmed yet (pending=${r.data?.pending}), retrying (${attempt}/${retries - 1})...`)
+            await new Promise(resolve => setTimeout(resolve, 3000))
+          }
+        } catch (err) {
+          if (cancelled) return null
+          if (attempt < retries) {
+            console.log(`[PaymentResult] Verify attempt ${attempt} failed, retrying...`)
+            await new Promise(resolve => setTimeout(resolve, 3000))
+          } else {
+            throw err
+          }
+        }
+      }
+      return null
+    }
+
     const verifyPayment = async () => {
       try {
         setVerifying(true)
 
         if (txRef) {
-          const r = await axios.get(`${backendUrl}/api/payment/chapa-verify/${txRef}`)
+          const data = await verifyWithRetry(txRef)
           if (cancelled) return
 
-          if (r.data?.success && r.data?.paid) {
+          if (data?.paid === true) {
             setResult({
               status: 'success',
               message: 'Payment confirmed! Your booking is confirmed.',
             })
-            setPayment(r.data.payment)
-            setBooking(r.data.booking)
+            if (data.payment) setPayment(data.payment)
+            if (data.booking) setBooking(data.booking)
             return
           }
 
-          if (r.data?.payment) setPayment(r.data.payment)
-
-          const paid = r.data?.paid === true
-          if (paid === false) {
-            const s = r.data?.payment?.status || ''
+          if (data?.paid === false) {
+            if (data.payment) setPayment(data.payment)
+            const s = data?.payment?.status || ''
             if (s === 'Cancelled' || s === 'cancelled') {
               setResult({
                 status: 'cancelled',
                 message: 'Payment was cancelled. Your booking is still pending — you can pay later from My Reservations.',
               })
-              setPayment(r.data.payment)
               return
             }
             setResult({

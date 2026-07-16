@@ -558,7 +558,7 @@ const checkAvailability = async (req, res) => {
 
 const bookWithChapa = async (req, res) => {
   try {
-    const { name, email, phone, checkin, checkout, guests, roomName, roomId, paymentMethod, channels } = req.body
+    const { name, email, phone, checkin, checkout, guests, roomName, roomId, paymentMethod, channels, frontendUrl } = req.body
 
     paymentConfig.logConfig('[bookWithChapa]')
 
@@ -659,7 +659,8 @@ const bookWithChapa = async (req, res) => {
     if (isMobileMoney) {
       isDirectCharge = true
       const dcType = getDirectChargeType(selectedChannel)
-      const frontendReturnUrl = `${paymentConfig.frontendUrl}/payment/result?tx_ref=${tx_ref}`
+      const origin = frontendUrl || paymentConfig.frontendUrl
+      const frontendReturnUrl = `${origin}/payment/result?tx_ref=${tx_ref}`
       const dcPayload = {
         type: dcType,
         amount: pricing.totalAmount,
@@ -716,7 +717,8 @@ const bookWithChapa = async (req, res) => {
     } else {
       payment.tx_ref = tx_ref
 
-      const frontendReturnUrl = `${paymentConfig.frontendUrl}/payment/result?tx_ref=${tx_ref}`
+      const origin = frontendUrl || paymentConfig.frontendUrl
+      const frontendReturnUrl = `${origin}/payment/result?tx_ref=${tx_ref}`
       const nameParts = (name || '').trim().split(/\s+/)
       const chapaPayload = {
         amount: String(pricing.totalAmount),

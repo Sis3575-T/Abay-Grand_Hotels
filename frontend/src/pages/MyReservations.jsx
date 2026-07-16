@@ -287,6 +287,7 @@ const MyReservations = () => {
                                   amount: res.totalAmount || 0,
                                   currency: 'ETB',
                                   channels: [],
+                                  frontendUrl: window.location.origin,
                                 })
                                 if (r.data?.success && r.data?.checkout_url) {
                                   window.location.href = r.data.checkout_url

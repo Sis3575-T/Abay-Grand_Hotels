@@ -44,7 +44,7 @@ function isValidChapaPayment(verificationData, expectedAmount, expectedCurrency)
 
 const initializePayment = async (req, res) => {
   try {
-    const { bookingId, guestName, guestEmail, guestPhone, paymentMethod, amount, currency, channels } = req.body
+    const { bookingId, guestName, guestEmail, guestPhone, paymentMethod, amount, currency, channels, frontendUrl } = req.body
 
     paymentConfig.logConfig('[initializePayment]')
 
@@ -111,7 +111,8 @@ const initializePayment = async (req, res) => {
 
       payment.tx_ref = tx_ref
 
-      const frontendReturnUrl = `${paymentConfig.frontendUrl}/payment/result?tx_ref=${tx_ref}`
+      const origin = frontendUrl || paymentConfig.frontendUrl
+      const frontendReturnUrl = `${origin}/payment/result?tx_ref=${tx_ref}`
       const nameParts = (guestName || '').trim().split(/\s+/)
       const chapaPayload = {
         amount: String(amount),
@@ -384,8 +385,10 @@ const verifyChapaPayment = async (req, res) => {
     }
 
     const verification = await chapaVerify(transactionId)
+    console.log(`[verifyChapaPayment] Chapa verify response for ${transactionId}:`, JSON.stringify(verification, null, 2))
     const chapaData = verification.data || verification
     const chapaStatus = (chapaData.status || '').toLowerCase()
+    console.log(`[verifyChapaPayment] chapaStatus=${chapaStatus}, chapaData keys=`, Object.keys(chapaData))
 
     payment.chapaResponse = verification
     payment.updatedAt = new Date()
@@ -431,6 +434,27 @@ const verifyChapaPayment = async (req, res) => {
         message: 'Payment verified and confirmed successfully',
         payment,
         booking,
+      })
+    }
+
+    if (chapaStatus === 'pending') {
+      return res.json({
+        success: true,
+        paid: false,
+        pending: true,
+        message: 'Payment is still processing. Checking again...',
+        payment,
+      })
+    }
+
+    if (chapaStatus === 'cancelled') {
+      payment.status = 'Cancelled'
+      await payment.save()
+      return res.json({
+        success: true,
+        paid: false,
+        message: 'Payment was cancelled.',
+        payment,
       })
     }
 

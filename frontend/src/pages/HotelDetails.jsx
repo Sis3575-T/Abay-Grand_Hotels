@@ -149,6 +149,7 @@ const HotelDetails = () => {
           ...formData,
           paymentMethod: 'Chapa',
           channels: [],
+          frontendUrl: window.location.origin,
         })
         if (response.data?.success && response.data?.checkout_url) {
           sessionStorage.setItem('chapa_tx_ref', response.data.tx_ref || '')
