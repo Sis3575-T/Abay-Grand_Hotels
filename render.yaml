@@ -28,8 +28,16 @@ services:
         value: CHASECK_TEST-ttCMGESjty3tmzBRPRUYk9gu5O8Xf8sm
       - key: CHAPA_API_URL
         value: https://api.chapa.co/v1
-      # IMPORTANT: Set MONGODB_URI in Render Dashboard → Environment
-      # (do not put database credentials in render.yaml)
+      - key: MONGODB_DB_NAME
+        value: Abay_Grand_Hotel
+      - key: MONGODB_URI
+        value: mongodb+srv://Abay_Grand_Hotel:Sis3575%40@cluster0.c1k01.mongodb.net/Abay_Grand_Hotel?retryWrites=true&w=majority
+      - key: CLOUDINARY_NAME
+        value: dto10sv4y
+      - key: CLOUDINARY_API_KEY
+        value: "989866536131774"
+      - key: CLOUDINARY_SECRET_KEY
+        value: 6oY0T0pmScWk5qHE6XPAJBz1-NQ
 
   - type: static
     name: abay-grand-hotel-frontend
