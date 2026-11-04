@@ -384,12 +384,14 @@ const verifyChapaPayment = async (req, res) => {
       })
     }
 
-    if (payment.isSimulation || req.query.simulation === 'true' || paymentConfig.isSimulationMode) {
+    const isSimAllowed = !paymentConfig.isLiveMode && (payment.isSimulation || paymentConfig.isSimulationMode)
+    if (isSimAllowed) {
       payment.status = 'Paid'
       payment.paymentDate = new Date()
       payment.verificationStatus = 'Verified'
       payment.chapaTransactionId = payment.transactionId || transactionId
       payment.verifiedAt = new Date()
+      payment.isSimulation = true
       await payment.save()
 
       let booking = null
@@ -403,7 +405,7 @@ const verifyChapaPayment = async (req, res) => {
       return res.json({
         success: true,
         paid: true,
-        message: 'Payment verified and confirmed successfully',
+        message: 'Payment verified and confirmed successfully (Test Simulation)',
         payment,
         booking,
       })
@@ -772,6 +774,27 @@ async function processWebhookPayment(req, res, payment, body, rawBody, signature
         payment.notes = `Webhook mismatch: amount=${amount}, currency=${currency}`
         await payment.save()
         return res.json({ success: true, message: 'Webhook processed with mismatch' })
+      }
+
+      // Security check: Verify transaction server-to-server with Chapa API to prevent webhook spoofing
+      if (!payment.isSimulation) {
+        try {
+          const verifyResult = await chapaVerify(tx_ref)
+          const vData = verifyResult.data || verifyResult
+          if ((vData.status || '').toLowerCase() !== 'success') {
+            console.error(`[chapaWebhook] Security check failed: Chapa API reported status "${vData.status}" for tx_ref ${tx_ref}`)
+            payment.status = 'Failed'
+            payment.notes = `Webhook rejected: Chapa API verify status is ${vData.status}`
+            await payment.save()
+            return res.status(400).json({ success: false, message: 'Payment verification failed with gateway' })
+          }
+        } catch (verifyErr) {
+          console.error(`[chapaWebhook] Could not verify transaction with Chapa API:`, verifyErr.message)
+          const isSigned = signature ? verifyWebhookSignature(rawBody, signature) : false
+          if (!isSigned) {
+            return res.status(401).json({ success: false, message: 'Unauthenticated webhook rejected' })
+          }
+        }
       }
 
       console.log(`[chapaWebhook] SETTING PAYMENT TO PAID: ${tx_ref}`)

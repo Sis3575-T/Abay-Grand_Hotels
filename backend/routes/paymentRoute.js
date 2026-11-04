@@ -28,7 +28,7 @@ const paymentRouter = express.Router()
 
 paymentRouter.get('/channels', getChapaChannels)
 paymentRouter.post('/initialize', initializePayment)
-paymentRouter.get('/test-chapa', testChapaConnection)
+paymentRouter.get('/test-chapa', adminAuth, testChapaConnection)
 paymentRouter.post('/confirm', confirmPayment)
 paymentRouter.get('/list', adminAuth, getAllPayments)
 paymentRouter.get('/stats', adminAuth, getPaymentStats)

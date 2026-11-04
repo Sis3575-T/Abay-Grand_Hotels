@@ -64,7 +64,11 @@ const getClientInfo = (body) => {
 const createReservation = async (req, res) => {
   try {
     const { name, email, phone, checkin, checkout, guests, roomName, roomId } = req.body
-    if (!name || !email || !checkin || !checkout || !guests || !roomName) {
+    const trimmedName = (name || '').trim()
+    const cleanEmail = (email || '').trim().toLowerCase()
+    const cleanPhone = (phone || '').replace(/[\s\-\(\)\.]/g, '')
+
+    if (!trimmedName || !cleanEmail || !checkin || !checkout || !guests || !roomName) {
       return res.status(400).json({ success: false, message: 'All fields are required' })
     }
     if (checkin >= checkout) {
@@ -104,9 +108,15 @@ const createReservation = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid booking dates' })
     }
 
-    const clientInfo = getClientInfo(req.body)
+    const clientInfo = getClientInfo({ name: trimmedName, email: cleanEmail })
     const newReservation = new Reservation({
-      name, email, phone, checkin, checkout, guests, roomName,
+      name: trimmedName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      checkin,
+      checkout,
+      guests,
+      roomName,
       roomId: resolvedRoomId,
       pricePerNight: pricing.pricePerNight,
       nights: pricing.nights,
@@ -632,7 +642,13 @@ const bookWithChapa = async (req, res) => {
     const clientInfo = getClientInfo(req.body)
 
     const newReservation = new Reservation({
-      name, email, phone, checkin, checkout, guests, roomName,
+      name: trimmedName,
+      email: cleanEmail,
+      phone: cleanPhone,
+      checkin,
+      checkout,
+      guests,
+      roomName,
       roomId: resolvedRoomId,
       pricePerNight: pricing.pricePerNight,
       nights: pricing.nights,
@@ -648,9 +664,9 @@ const bookWithChapa = async (req, res) => {
     const payment = new Payment({
       transactionId: tx_ref,
       bookingId: newReservation._id,
-      guestName: name,
-      guestEmail: email,
-      guestPhone: phone || '',
+      guestName: trimmedName,
+      guestEmail: cleanEmail,
+      guestPhone: cleanPhone,
       paymentMethod: selectedChannel || 'Chapa',
       chapaChannel: selectedChannel,
       amount: pricing.totalAmount,
