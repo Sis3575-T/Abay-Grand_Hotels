@@ -19,13 +19,13 @@ services:
       - key: JWT_SECRET
         value: demo
       - key: CHAPA_SECRET_KEY
-        value: CHASECK_TEST-ttCMGESjty3tmzBRPRUYk9gu5O8Xf8sm
+        value: CHASECK_TEST-xRIJg1B5qtI4x0kiV5K1xQwLXnlWweq7
       - key: CHAPA_PUBLIC_KEY
-        value: CHAPUBK_TEST-DQFH3iHjMZeA5LFDP2OOcZNf7LrRYHVq
+        value: CHAPUBK_TEST-MFWmVXliolVccGkgDFIiwldGuWu1etoV
       - key: CHAPA_ENCRYPTION_KEY
-        value: 0Or6a5iiGSwKM8TVGejDOBNp
+        value: mjl0g9vVbumU71AVYCMzPP1R
       - key: CHAPA_WEBHOOK_SECRET
-        value: CHASECK_TEST-ttCMGESjty3tmzBRPRUYk9gu5O8Xf8sm
+        value: CHASECK_TEST-xRIJg1B5qtI4x0kiV5K1xQwLXnlWweq7
       - key: CHAPA_API_URL
         value: https://api.chapa.co/v1
       - key: MONGODB_DB_NAME

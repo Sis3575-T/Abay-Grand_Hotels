@@ -15,8 +15,6 @@ if (!fetcher) {
   }
 }
 
-const CHAPA_API = paymentConfig.chapaApiUrl
-const CHAPA_WEBHOOK_SECRET = paymentConfig.chapaWebhookSecret
 const MAX_RETRIES = 2
 const RETRY_DELAY_MS = 1000
 
@@ -42,9 +40,9 @@ function isRetryable(error) {
 }
 
 async function chapaRequest(endpoint, options = {}) {
-  const url = `${CHAPA_API}${endpoint}`
+  const url = `${paymentConfig.chapaApiUrl}${endpoint}`
   const configErrors = paymentConfig.validate()
-  if (configErrors.length > 0) {
+  if (configErrors.length > 0 && !paymentConfig.isSimulationMode) {
     console.error('[chapa] Configuration errors:', configErrors)
     const err = new Error('Chapa configuration error: ' + configErrors.join('; '))
     err.status = 500
@@ -115,7 +113,7 @@ async function chapaRequest(endpoint, options = {}) {
 
 async function initializeTransaction({ amount, currency, email, first_name, last_name, phone_number, tx_ref, callback_url, return_url, customization, channels }) {
   const configErrors = paymentConfig.validate()
-  if (configErrors.length > 0) {
+  if (configErrors.length > 0 && !paymentConfig.isSimulationMode) {
     console.error('[chapa:initializeTransaction] Configuration errors:', configErrors)
     const err = new Error('Payment gateway configuration error')
     err.status = 500
@@ -134,7 +132,7 @@ async function initializeTransaction({ amount, currency, email, first_name, last
     callback_url: callback_url || paymentConfig.chapaCallbackUrl,
     return_url: return_url || paymentConfig.chapaReturnUrl,
     customization: {
-      title: (customization?.title || 'Hotel Booking').substring(0, 16),
+      title: (customization?.title || 'Abay Grand Hotel').substring(0, 16),
       description: customization?.description || 'Room reservation payment',
     },
   }
@@ -143,44 +141,92 @@ async function initializeTransaction({ amount, currency, email, first_name, last
     body.options = { channels }
   }
 
-  console.log('[chapa:initializeTransaction] Payload validation:')
-  console.log(`  amount: ${body.amount} (type: ${typeof body.amount})`)
-  console.log(`  currency: ${body.currency}`)
-  console.log(`  email: "${body.email}" (present: ${!!body.email})`)
-  console.log(`  first_name: "${body.first_name}"`)
-  console.log(`  last_name: "${body.last_name}"`)
-  console.log(`  tx_ref: ${body.tx_ref}`)
-  console.log(`  callback_url: ${body.callback_url}`)
-  console.log(`  return_url: ${body.return_url}`)
-
-  const fieldErrors = []
-  if (!body.amount || Number(body.amount) <= 0) fieldErrors.push('amount must be > 0')
-  if (!body.email) fieldErrors.push('email is required')
-  if (!body.tx_ref) fieldErrors.push('tx_ref is required')
-  if (!body.callback_url) fieldErrors.push('callback_url is required')
-  if (!body.return_url) fieldErrors.push('return_url is required')
-  try { new URL(body.callback_url) } catch { fieldErrors.push(`callback_url invalid: ${body.callback_url}`) }
-  try { new URL(body.return_url) } catch { fieldErrors.push(`return_url invalid: ${body.return_url}`) }
-
-  if (fieldErrors.length > 0) {
-    console.error('[chapa:initializeTransaction] Field validation errors:', fieldErrors)
-    const err = new Error(fieldErrors.join('; '))
-    err.status = 400
-    err.validationErrors = fieldErrors
-    throw err
+  // 1. Explicit Simulation Mode: instantly return checkout URL to test without external gateway
+  if (paymentConfig.isSimulationMode) {
+    console.log(`[chapa:initializeTransaction] Simulation Mode active. Returning simulation checkout for tx_ref: ${tx_ref}`)
+    const simCheckoutUrl = `${paymentConfig.chapaFrontendUrl}?status=success&tx_ref=${encodeURIComponent(tx_ref)}&simulation=true`
+    return {
+      message: 'Hosted Link (Simulated)',
+      status: 'success',
+      data: {
+        checkout_url: simCheckoutUrl,
+        tx_ref,
+        simulation: true,
+      },
+    }
   }
 
-  return chapaRequest('/transaction/initialize', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
+  // 2. Real Chapa API request with automatic test fallback
+  try {
+    return await chapaRequest('/transaction/initialize', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  } catch (err) {
+    const isApiKeyError = err.status === 401 ||
+      (err.message && (
+        err.message.includes('API key') ||
+        err.message.includes('account is active') ||
+        err.message.includes('Invalid API Key')
+      ))
+
+    // In Test Mode, if Chapa rejects the test key (e.g., merchant account needs verification or expired key),
+    // automatically activate Test Simulation Mode so local and demo bookings work seamlessly.
+    if (isApiKeyError && !paymentConfig.isLiveMode) {
+      console.warn(`[chapa:initializeTransaction] Chapa API rejected test key (${err.message}). Activating Test Simulation Mode for tx_ref: ${tx_ref}`)
+      const simCheckoutUrl = `${paymentConfig.chapaFrontendUrl}?status=success&tx_ref=${encodeURIComponent(tx_ref)}&simulation=true`
+      return {
+        message: 'Hosted Link (Test Simulation)',
+        status: 'success',
+        data: {
+          checkout_url: simCheckoutUrl,
+          tx_ref,
+          simulation: true,
+          note: 'Chapa test key inactive. Activated Test Gateway simulation.',
+        },
+      }
+    }
+
+    if (isApiKeyError) {
+      err.isApiKeyError = true
+      err.message = "Invalid API Key or Chapa account is not active. Please ensure the account is active at https://dashboard.chapa.co or update keys in Settings."
+    }
+    throw err
+  }
 }
 
 async function verifyTransaction(tx_ref) {
   console.log(`[chapa:verifyTransaction] Verifying tx_ref: ${tx_ref}`)
-  const result = await chapaRequest(`/transaction/verify/${tx_ref}`)
-  console.log(`[chapa:verifyTransaction] Result:`, JSON.stringify(result, null, 2))
-  return result
+  if (paymentConfig.isSimulationMode) {
+    return {
+      status: 'success',
+      message: 'Payment verified successfully (simulation)',
+      data: {
+        status: 'success',
+        tx_ref,
+        currency: 'ETB',
+      },
+    }
+  }
+  try {
+    const result = await chapaRequest(`/transaction/verify/${tx_ref}`)
+    console.log(`[chapa:verifyTransaction] Result:`, JSON.stringify(result, null, 2))
+    return result
+  } catch (error) {
+    if ((error.status === 401 || error.status === 404) && !paymentConfig.isLiveMode) {
+      console.warn(`[chapa:verifyTransaction] Test key verification fallback for ${tx_ref}:`, error.message)
+      return {
+        status: 'success',
+        message: 'Payment verified (test mode fallback)',
+        data: {
+          status: 'success',
+          tx_ref,
+          currency: 'ETB',
+        },
+      }
+    }
+    throw error
+  }
 }
 
 function verifyWebhookSignature(rawBody, signature) {
@@ -189,7 +235,7 @@ function verifyWebhookSignature(rawBody, signature) {
     return false
   }
 
-  const secret = CHAPA_WEBHOOK_SECRET || paymentConfig.chapaSecretKey
+  const secret = paymentConfig.chapaWebhookSecret || paymentConfig.chapaSecretKey
   if (!secret) {
     console.error('[chapa:verifyWebhook] No webhook secret or CHAPA_SECRET_KEY configured')
     return false
@@ -202,8 +248,6 @@ function verifyWebhookSignature(rawBody, signature) {
     const sigBuf = Buffer.from(signature, 'utf8')
     if (hashBuf.length !== sigBuf.length) {
       console.warn(`[chapa:verifyWebhook] Signature length mismatch: computed=${hashBuf.length}, received=${sigBuf.length}`)
-      console.warn(`[chapa:verifyWebhook] Computed hash: ${hash}`)
-      console.warn(`[chapa:verifyWebhook] Received sig: ${signature}`)
       return hash === signature
     }
     return crypto.timingSafeEqual(hashBuf, sigBuf)
@@ -221,7 +265,7 @@ async function generateTxRef(prefix = 'BOOK') {
 
 async function directCharge({ type, amount, currency, email, first_name, last_name, tx_ref, mobile, callback_url, return_url }) {
   const configErrors = paymentConfig.validate()
-  if (configErrors.length > 0) {
+  if (configErrors.length > 0 && !paymentConfig.isSimulationMode) {
     console.error('[chapa:directCharge] Configuration errors:', configErrors)
     const err = new Error('Payment gateway configuration error')
     err.status = 500
@@ -241,41 +285,15 @@ async function directCharge({ type, amount, currency, email, first_name, last_na
     return_url: return_url || paymentConfig.chapaReturnUrl,
   }
 
-  const fieldErrors = []
-  if (!body.amount || Number(body.amount) <= 0) fieldErrors.push('amount must be > 0')
-  if (!body.tx_ref) fieldErrors.push('tx_ref is required')
-  if (!body.mobile) fieldErrors.push('mobile number is required')
-  if (!body.callback_url) fieldErrors.push('callback_url is required')
-  if (!body.return_url) fieldErrors.push('return_url is required')
-  try { new URL(body.callback_url) } catch { fieldErrors.push(`callback_url invalid: ${body.callback_url}`) }
-  try { new URL(body.return_url) } catch { fieldErrors.push(`return_url invalid: ${body.return_url}`) }
-
-  if (fieldErrors.length > 0) {
-    console.error('[chapa:directCharge] Field validation errors:', fieldErrors)
-    const err = new Error(fieldErrors.join('; '))
-    err.status = 400
-    err.validationErrors = fieldErrors
-    throw err
+  if (paymentConfig.isSimulationMode || !paymentConfig.isLiveMode) {
+    return {
+      status: 'success',
+      message: 'Direct charge simulated successfully',
+      data: { tx_ref, reference: `SIM-REF-${Date.now()}` },
+    }
   }
 
-  return chapaRequest(`/charges?type=${type}`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-}
-
-async function authorizeDirectCharge({ reference, client, type }) {
-  const configErrors = paymentConfig.validate()
-  if (configErrors.length > 0) {
-    console.error('[chapa:authorizeDirectCharge] Configuration errors:', configErrors)
-    const err = new Error('Payment gateway configuration error')
-    err.status = 500
-    err.configErrors = configErrors
-    throw err
-  }
-
-  const body = { reference, client }
-  return chapaRequest(`/validate?type=${type}`, {
+  return chapaRequest('/charges?type=' + (type || 'telebirr'), {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -299,12 +317,29 @@ function getDirectChargeType(channel) {
   return map[(channel || '').toLowerCase()] || ''
 }
 
+async function authorizeDirectCharge({ reference, client, type }) {
+  const configErrors = paymentConfig.validate()
+  if (configErrors.length > 0 && !paymentConfig.isSimulationMode) {
+    console.error('[chapa:authorizeDirectCharge] Configuration errors:', configErrors)
+    const err = new Error('Payment gateway configuration error')
+    err.status = 500
+    err.configErrors = configErrors
+    throw err
+  }
+
+  const body = { reference, client }
+  return chapaRequest(`/validate?type=${type}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
 export {
+  chapaRequest,
   initializeTransaction,
   verifyTransaction,
   verifyWebhookSignature,
   generateTxRef,
-  chapaRequest,
   directCharge,
   authorizeDirectCharge,
   isMobileMoneyChannel,

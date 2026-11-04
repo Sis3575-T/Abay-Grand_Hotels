@@ -1,3 +1,19 @@
+import Settings from '../models/settingsModels.js'
+
+let cachedDbSettings = null
+
+export const refreshPaymentConfig = async () => {
+  try {
+    const s = await Settings.findOne().lean()
+    if (s) {
+      cachedDbSettings = s
+      console.log('[paymentConfig] Settings refreshed from DB. Chapa Mode:', s.chapaMode || 'TEST')
+    }
+  } catch (err) {
+    // MongoDB might not be connected yet during boot
+  }
+}
+
 const paymentConfig = {
   get backendUrl() {
     return process.env.BACKEND_URL || 'http://localhost:4000'
@@ -9,16 +25,16 @@ const paymentConfig = {
     return process.env.CHAPA_API_URL || 'https://api.chapa.co/v1'
   },
   get chapaSecretKey() {
-    return process.env.CHAPA_SECRET_KEY
+    return cachedDbSettings?.chapaSecretKey || process.env.CHAPA_SECRET_KEY || ''
   },
   get chapaPublicKey() {
-    return process.env.CHAPA_PUBLIC_KEY
+    return cachedDbSettings?.chapaPublicKey || process.env.CHAPA_PUBLIC_KEY || ''
   },
   get chapaEncryptionKey() {
-    return process.env.CHAPA_ENCRYPTION_KEY
+    return cachedDbSettings?.chapaEncryptionKey || process.env.CHAPA_ENCRYPTION_KEY || ''
   },
   get chapaWebhookSecret() {
-    return process.env.CHAPA_WEBHOOK_SECRET
+    return cachedDbSettings?.chapaWebhookSecret || process.env.CHAPA_WEBHOOK_SECRET || ''
   },
   get chapaCallbackUrl() {
     return process.env.CHAPA_CALLBACK_URL || `${this.backendUrl}/api/payment/chapa-webhook`
@@ -30,11 +46,29 @@ const paymentConfig = {
     return process.env.CHAPA_FRONTEND_URL || `${this.frontendUrl}/payment/result`
   },
   get isLiveMode() {
+    if (cachedDbSettings?.chapaMode) {
+      return cachedDbSettings.chapaMode.toUpperCase() === 'LIVE'
+    }
     const key = this.chapaSecretKey || ''
     return key.startsWith('CHASECK_LIVE')
   },
   get mode() {
     return this.isLiveMode ? 'LIVE' : 'TEST'
+  },
+  get isSimulationMode() {
+    if (typeof cachedDbSettings?.chapaSimulationMode === 'boolean') {
+      return cachedDbSettings.chapaSimulationMode
+    }
+    if (process.env.CHAPA_SIMULATION_MODE !== undefined) {
+      return process.env.CHAPA_SIMULATION_MODE === 'true'
+    }
+    return false
+  },
+  get isChapaEnabled() {
+    if (typeof cachedDbSettings?.chapaEnabled === 'boolean') {
+      return cachedDbSettings.chapaEnabled
+    }
+    return true
   },
   supportedMethods: [
     'Chapa', 'Telebirr', 'CBE Birr', 'Awash Bank', 'Dashen Bank',
@@ -68,13 +102,15 @@ const paymentConfig = {
     console.log(`${prefix} CHAPA_RETURN_URL: ${this.chapaReturnUrl}`)
     console.log(`${prefix} CHAPA_FRONTEND_URL: ${this.chapaFrontendUrl}`)
     console.log(`${prefix} Mode: ${this.mode}`)
+    console.log(`${prefix} Simulation Mode: ${this.isSimulationMode}`)
+    console.log(`${prefix} Chapa Enabled: ${this.isChapaEnabled}`)
     console.log(`${prefix} Webhook secret present: ${!!this.chapaWebhookSecret}`)
   },
 
   validate() {
     const errors = []
-    if (!this.chapaSecretKey) errors.push('CHAPA_SECRET_KEY is not set')
-    if (!this.chapaPublicKey) errors.push('CHAPA_PUBLIC_KEY is not set')
+    if (!this.chapaSecretKey && !this.isSimulationMode) errors.push('CHAPA_SECRET_KEY is not set')
+    if (!this.chapaPublicKey && !this.isSimulationMode) errors.push('CHAPA_PUBLIC_KEY is not set')
     if (!this.chapaApiUrl) errors.push('CHAPA_API_URL is not set')
     if (!this.chapaCallbackUrl) errors.push('CHAPA_CALLBACK_URL is not set')
     if (!this.chapaReturnUrl) errors.push('CHAPA_RETURN_URL is not set')

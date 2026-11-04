@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import axios from 'axios'
 import { backendUrl, useSettings } from '../App'
-import { MdSave, MdHotel, MdLocationOn, MdPhone, MdEmail, MdLanguage, MdCameraAlt, MdRefresh, MdAdd, MdClose, MdTextFields, MdCampaign, MdMail, MdWeb, MdInfo, MdContactSupport, MdCopyright, MdDelete, MdEdit, MdHistory, MdTrendingUp, MdStar } from 'react-icons/md'
+import { MdSave, MdHotel, MdLocationOn, MdPhone, MdEmail, MdLanguage, MdCameraAlt, MdRefresh, MdAdd, MdClose, MdTextFields, MdCampaign, MdMail, MdWeb, MdInfo, MdContactSupport, MdCopyright, MdDelete, MdEdit, MdHistory, MdTrendingUp, MdStar, MdPayment, MdCheckCircle, MdCancel, MdVisibility, MdVisibilityOff } from 'react-icons/md'
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin, FaYoutube, FaGlobe } from 'react-icons/fa'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -52,6 +52,8 @@ const Settings = () => {
     aboutTitle: '', aboutSubtitle: '', aboutContent: '', aboutImage: '',
     contactTitle: '', contactSubtitle: '', copyrightText: '',
     checkinTime: '14:00', checkoutTime: '12:00', currency: 'ETB', taxRate: '15',
+    chapaSecretKey: '', chapaPublicKey: '', chapaWebhookSecret: '',
+    chapaMode: 'TEST', chapaSimulationMode: true, chapaEnabled: true,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -63,6 +65,9 @@ const Settings = () => {
   const [aboutDragOver, setAboutDragOver] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState({})
+  const [showSecretKey, setShowSecretKey] = useState(false)
+  const [chapaTestLoading, setChapaTestLoading] = useState(false)
+  const [chapaTestResult, setChapaTestResult] = useState(null)
 
   // About content management
   const [aboutData, setAboutData] = useState({ facilities: [], amenities: [], history: '', stats: { luxuryRooms: '50+', happyGuests: '200+', yearsExperience: '15+', guestRating: '4.8' } })
@@ -106,6 +111,12 @@ const Settings = () => {
           contactTitle: s.contactTitle || '', contactSubtitle: s.contactSubtitle || '', copyrightText: s.copyrightText || '',
           checkinTime: s.checkinTime || '14:00', checkoutTime: s.checkoutTime || '12:00',
           currency: s.currency || 'ETB', taxRate: s.taxRate || '15',
+          chapaSecretKey: s.chapaSecretKey || '',
+          chapaPublicKey: s.chapaPublicKey || '',
+          chapaWebhookSecret: s.chapaWebhookSecret || '',
+          chapaMode: s.chapaMode || 'TEST',
+          chapaSimulationMode: s.chapaSimulationMode ?? true,
+          chapaEnabled: s.chapaEnabled ?? true,
         })
       }
     } catch (err) {
@@ -253,6 +264,28 @@ const Settings = () => {
       notify.error(err.response?.data?.message || 'Error saving stats')
     } finally {
       setStatsSaving(false)
+    }
+  }
+
+  const handleTestChapaConnection = async () => {
+    setChapaTestLoading(true)
+    setChapaTestResult(null)
+    try {
+      const res = await axios.get(backendUrl + '/api/payment/test-chapa', { headers: getAuthHeaders() })
+      const isSuccess = res.data?.success && res.data?.isActive !== false
+      setChapaTestResult({
+        success: isSuccess,
+        message: res.data?.message || 'Chapa API key is active and ready to process payments!',
+      })
+      if (isSuccess) notify.success('Chapa account is active and able to process payments!')
+      else notify.error(res.data?.message || 'Chapa connection failed')
+    } catch (err) {
+      const data = err.response?.data
+      const msg = data?.message || err.message || 'Connection test failed'
+      setChapaTestResult({ success: false, message: msg })
+      notify.error(msg)
+    } finally {
+      setChapaTestLoading(false)
     }
   }
 
@@ -693,6 +726,133 @@ const Settings = () => {
             <Field label="Check-out Time" value={form.checkoutTime} error={errors.checkoutTime} onChange={handleChange('checkoutTime')} type="time" />
             <Field label="Currency" value={form.currency} error={errors.currency} onChange={handleChange('currency')} type="select" />
             <Field label="Tax Rate (%)" value={form.taxRate} error={errors.taxRate} onChange={handleChange('taxRate')} type="number" required />
+          </div>
+        </div>
+
+        {/* Chapa Payment Gateway Configuration */}
+        <div className="p-5 card-hover" style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px' }}>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h3 className="font-semibold flex items-center gap-2" style={{ color: '#1E293B' }}>
+              <MdPayment size={18} style={{ color: '#059669' }} /> Chapa Payment Gateway & API Key Configuration
+            </h3>
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+              form.chapaMode === 'LIVE' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {form.chapaMode === 'LIVE' ? '● LIVE MODE' : '● TEST MODE'}
+            </span>
+          </div>
+
+          <div className="p-3.5 mb-4 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900 leading-relaxed space-y-1">
+            <p><strong>Chapa Account Status & API Keys:</strong></p>
+            <p>1. Log in to your <a href="https://dashboard.chapa.co" target="_blank" rel="noreferrer" className="underline font-bold text-blue-700">Chapa Dashboard</a> and verify your email.</p>
+            <p>2. Complete business compliance under <strong>Settings &gt; Compliance</strong> so your merchant account is active and able to process payments.</p>
+            <p>3. Copy your <strong>Secret Key</strong> (<code>CHASECK_...</code>) and <strong>Public Key</strong> (<code>CHAPUBK_...</code>) from <strong>Settings &gt; API & Webhooks</strong> and paste below.</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>Gateway Mode</label>
+              <select
+                className="input-field"
+                value={form.chapaMode}
+                onChange={handleChange('chapaMode')}
+              >
+                <option value="TEST">Test Mode (Sandbox / Testing)</option>
+                <option value="LIVE">Live Mode (Production / Real Payments)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-6 pt-5 flex-wrap">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold" style={{ color: '#374151' }}>
+                <input
+                  type="checkbox"
+                  checked={form.chapaEnabled}
+                  onChange={e => setForm(p => ({ ...p, chapaEnabled: e.target.checked }))}
+                  className="rounded"
+                />
+                Enable Chapa Payments
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold" style={{ color: '#374151' }}>
+                <input
+                  type="checkbox"
+                  checked={form.chapaSimulationMode}
+                  onChange={e => setForm(p => ({ ...p, chapaSimulationMode: e.target.checked }))}
+                  className="rounded"
+                />
+                Sandbox Simulation (Test bookings without key errors)
+              </label>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>
+                Chapa Secret Key (CHASECK_...) <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showSecretKey ? 'text' : 'password'}
+                  className="input-field"
+                  placeholder="CHASECK_TEST-..."
+                  value={form.chapaSecretKey}
+                  onChange={handleChange('chapaSecretKey')}
+                  style={{ paddingRight: '40px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecretKey(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title={showSecretKey ? 'Hide key' : 'Show key'}
+                >
+                  {showSecretKey ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>
+                Chapa Public Key (CHAPUBK_...) <span style={{ color: '#DC2626' }}>*</span>
+              </label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="CHAPUBK_TEST-..."
+                value={form.chapaPublicKey}
+                onChange={handleChange('chapaPublicKey')}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold mb-1" style={{ color: '#6B7280' }}>Chapa Webhook Secret (Optional)</label>
+              <input
+                type="text"
+                className="input-field"
+                placeholder="CHASECK_TEST_..."
+                value={form.chapaWebhookSecret}
+                onChange={handleChange('chapaWebhookSecret')}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-gray-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={MdRefresh}
+              loading={chapaTestLoading}
+              onClick={handleTestChapaConnection}
+            >
+              Test Account & API Key Status
+            </Button>
+
+            {chapaTestResult && (
+              <div className={`text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium ${
+                chapaTestResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {chapaTestResult.success ? <MdCheckCircle size={15} /> : <MdCancel size={15} />}
+                <span>{chapaTestResult.message}</span>
+              </div>
+            )}
           </div>
         </div>
 

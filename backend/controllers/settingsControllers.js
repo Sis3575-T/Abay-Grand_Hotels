@@ -1,5 +1,6 @@
 import Settings from '../models/settingsModels.js'
 import { v2 as cloudinary } from "cloudinary";
+import { refreshPaymentConfig } from '../config/payment.js'
 
 const defaultSettings = {
   hotelName: 'Abay Grand Hotel',
@@ -34,7 +35,22 @@ const defaultSettings = {
   checkoutTime: '12:00',
   currency: 'ETB',
   taxRate: '15',
+  chapaMode: 'TEST',
+  chapaEnabled: true,
+  chapaSimulationMode: false,
 }
+
+const SETTINGS_FIELDS = [
+  'hotelName', 'address', 'phone', 'email', 'website',
+  'description', 'tagline', 'heroButtonText', 'heroImage',
+  'newsletterTitle', 'newsletterButtonText', 'newsletterPlaceholder',
+  'roomsSectionTitle', 'facilityTitle', 'facilitySubtitle',
+  'aboutTitle', 'aboutSubtitle', 'aboutContent', 'aboutImage',
+  'contactTitle', 'contactSubtitle', 'copyrightText',
+  'checkinTime', 'checkoutTime', 'currency', 'taxRate',
+  'chapaSecretKey', 'chapaPublicKey', 'chapaWebhookSecret', 'chapaEncryptionKey',
+  'chapaMode', 'chapaSimulationMode', 'chapaEnabled',
+]
 
 const getSettings = async (req, res) => {
   try {
@@ -69,16 +85,7 @@ const migrateOldSocialFields = (settings) => {
 const updateSettings = async (req, res) => {
   try {
     const updateData = {}
-    const fields = [
-      'hotelName', 'address', 'phone', 'email', 'website',
-      'description', 'tagline', 'heroButtonText', 'heroImage',
-      'newsletterTitle', 'newsletterButtonText', 'newsletterPlaceholder',
-      'roomsSectionTitle', 'facilityTitle', 'facilitySubtitle',
-      'aboutTitle', 'aboutSubtitle', 'aboutContent', 'aboutImage',
-      'contactTitle', 'contactSubtitle', 'copyrightText',
-      'checkinTime', 'checkoutTime', 'currency', 'taxRate'
-    ]
-    fields.forEach(f => {
+    SETTINGS_FIELDS.forEach(f => {
       if (req.body[f] !== undefined) updateData[f] = req.body[f]
     })
 
@@ -120,6 +127,7 @@ const updateSettings = async (req, res) => {
       settings = await Settings.findByIdAndUpdate(settings._id, updateData, { new: true })
     }
 
+    await refreshPaymentConfig()
     res.json({ success: true, message: 'Settings updated successfully', settings })
   } catch (error) {
     console.error('updateSettings error:', error?.message || error)
@@ -142,7 +150,13 @@ const getPublicSettings = async (req, res) => {
     } else {
       await migrateSettings()
     }
-    res.json({ success: true, settings })
+    const publicData = settings.toObject ? settings.toObject() : { ...settings }
+    // Never expose private API keys to public clients
+    delete publicData.chapaSecretKey
+    delete publicData.chapaWebhookSecret
+    delete publicData.chapaEncryptionKey
+
+    res.json({ success: true, settings: publicData })
   } catch (error) {
     console.error('getPublicSettings error:', error?.message || error)
     res.status(500).json({ success: false, message: 'Error fetching settings' })
@@ -152,16 +166,7 @@ const getPublicSettings = async (req, res) => {
 const updateSettingsJson = async (req, res) => {
   try {
     const updateData = {}
-    const fields = [
-      'hotelName', 'address', 'phone', 'email', 'website',
-      'description', 'tagline', 'heroButtonText', 'heroImage',
-      'newsletterTitle', 'newsletterButtonText', 'newsletterPlaceholder',
-      'roomsSectionTitle', 'facilityTitle', 'facilitySubtitle',
-      'aboutTitle', 'aboutSubtitle', 'aboutContent', 'aboutImage',
-      'contactTitle', 'contactSubtitle', 'copyrightText',
-      'checkinTime', 'checkoutTime', 'currency', 'taxRate'
-    ]
-    fields.forEach(f => {
+    SETTINGS_FIELDS.forEach(f => {
       if (req.body[f] !== undefined) updateData[f] = req.body[f]
     })
 
@@ -178,6 +183,7 @@ const updateSettingsJson = async (req, res) => {
       settings = await Settings.findByIdAndUpdate(settings._id, updateData, { new: true })
     }
 
+    await refreshPaymentConfig()
     res.json({ success: true, message: 'Settings updated successfully', settings })
   } catch (error) {
     console.error('updateSettingsJson error:', error?.message || error)

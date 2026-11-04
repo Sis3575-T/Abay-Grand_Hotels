@@ -32,6 +32,13 @@ const settingsSchema = new mongoose.Schema({
   taxRate: { type: String, default: '15' },
   logo: { type: String, default: '' },
   heroImage: { type: String, default: '' },
+  chapaSecretKey: { type: String, default: '' },
+  chapaPublicKey: { type: String, default: '' },
+  chapaWebhookSecret: { type: String, default: '' },
+  chapaEncryptionKey: { type: String, default: '' },
+  chapaMode: { type: String, default: 'TEST' },
+  chapaEnabled: { type: Boolean, default: true },
+  chapaSimulationMode: { type: Boolean, default: false },
 })
 
 settingsSchema.index({ hotelName: 1 })

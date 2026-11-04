@@ -132,9 +132,9 @@ const singleHotel = async (req, res) => {
 	try {
 		const id = req.query.id || req.params.id;
 		if (!id) return res.status(400).json({ success: false, message: 'id is required' });
-		const hotel = await hotelModel.findById(id);
+		const hotel = await hotelModel.findById(id).lean();
 		if (!hotel) return res.status(404).json({ success: false, message: 'Room not found' });
-		return res.json({ hotel });
+		return res.json({ success: true, hotel });
 	} catch (error) {
 		console.error('singleHotel error:', error?.message || error);
 		return res.status(500).json({ success: false, message: 'error fetching hotel room' });

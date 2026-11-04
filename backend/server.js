@@ -25,7 +25,7 @@ import dashboardRouter from './routes/dashboardRoute.js'
 import aboutRouter from './routes/aboutRoute.js'
 import paymentRouter from './routes/paymentRoute.js'
 import syncRouter from './routes/syncRoute.js'
-import paymentConfig from './config/payment.js'
+import paymentConfig, { refreshPaymentConfig } from './config/payment.js'
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -74,8 +74,12 @@ const initDB = async () => {
   await connectDB()
   if (mongoose.connection.readyState === 1) {
     seedAdmin()
+    refreshPaymentConfig()
   } else {
-    mongoose.connection.once('connected', seedAdmin)
+    mongoose.connection.once('connected', () => {
+      seedAdmin()
+      refreshPaymentConfig()
+    })
   }
 }
 initDB()

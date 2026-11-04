@@ -765,17 +765,29 @@ const bookWithChapa = async (req, res) => {
         }
         payment.notes = 'Chapa initialization failed: ' + chapaMsg + (chapaDetail ? ' - ' + chapaDetail : '')
         await payment.save()
-        await Reservation.findByIdAndDelete(newReservation._id)
 
-        const errParts = [chapaMsg]
-        if (chapaDetail) errParts.push(chapaDetail)
+        const isApiKeyError = chapaError.isApiKeyError || chapaError.status === 401 ||
+          chapaMsg.toLowerCase().includes('api key') || chapaMsg.toLowerCase().includes('account is active')
+
+        const displayMsg = isApiKeyError
+          ? "Chapa online payment is temporarily unavailable. Please select 'Pay at Hotel' to complete your reservation."
+          : chapaMsg + (chapaDetail ? '. ' + chapaDetail : '')
+
         return res.status(chapaError?.status || 502).json({
           success: false,
-          message: errParts.join('. '),
+          isApiKeyError,
+          allowPayAtHotel: true,
+          bookingId: newReservation._id,
+          message: displayMsg,
           error: chapaError?.chapaData || chapaError?.message || String(chapaError),
           validationErrors: chapaError?.validationErrors,
           status: chapaError?.status || 502,
         })
+      }
+
+      if (chapaResult?.data?.simulation) {
+        payment.notes = 'Simulation mode payment: ' + (chapaResult.data?.note || 'Simulated gateway')
+        payment.isSimulation = true
       }
 
       payment.chapaResponse = chapaResult

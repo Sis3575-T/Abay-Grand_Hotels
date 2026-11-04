@@ -22,10 +22,10 @@ Make sure the **backend service** on Render has these environment variables set 
 | `ADMIN_EMAIL` | `sisay3575@gmail.com` |
 | `ADMIN_PASSWORD` | `Sis3575@` |
 | `JWT_SECRET` | `demo` |
-| `CHAPA_SECRET_KEY` | `CHASECK_TEST-rEaRFW3Nzc7lQCXM3xwmYmqKLijltRUb` |
-| `CHAPA_PUBLIC_KEY` | `CHAPUBK_TEST-SvTl96p9pX9V46wF7CDalK4lQ3K9p1fS` |
+| `CHAPA_SECRET_KEY` | `CHASECK_TEST-xRIJg1B5qtI4x0kiV5K1xQwLXnlWweq7` |
+| `CHAPA_PUBLIC_KEY` | `CHAPUBK_TEST-MFWmVXliolVccGkgDFIiwldGuWu1etoV` |
 | `CHAPA_WEBHOOK_SECRET` | `CHASECK_TEST_6D0FA9C1A51AFB40AAB8D8C8C3601A6B` |
-| `CHAPA_ENCRYPTION_KEY` | `iPf32TXeZEvwVb16fILsQHiA` |
+| `CHAPA_ENCRYPTION_KEY` | `mjl0g9vVbumU71AVYCMzPP1R` |
 | `CHAPA_RETURN_URL` | `https://abay-grand-hotel-nmn9.onrender.com/api/payment/chapa-return` |
 
 For the **frontend** (Vercel), set:

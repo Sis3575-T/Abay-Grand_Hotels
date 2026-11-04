@@ -57,6 +57,7 @@ const paymentSchema = new mongoose.Schema({
   }],
   archived: { type: Boolean, default: false },
   archivedAt: { type: Date, default: null },
+  isSimulation: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 })
