@@ -81,7 +81,20 @@ async function chapaRequest(endpoint, options = {}) {
       console.log(`[chapa] Response body:\n${JSON.stringify(data, null, 2)}`)
 
       if (!res.ok) {
-        const chapaMsg = toStr(data.message) || toStr(data.msg) || toStr(data.detail) || toStr(data.error) || ''
+        let chapaMsg = ''
+        if (typeof data?.message === 'string' && data.message) {
+          chapaMsg = data.message
+        } else if (data?.data && typeof data.data === 'object') {
+          chapaMsg = Object.entries(data.data)
+            .map(([f, errs]) => `${f}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+            .join('; ')
+        } else if (data?.message && typeof data.message === 'object') {
+          chapaMsg = Object.entries(data.message)
+            .map(([f, errs]) => `${f}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+            .join('; ')
+        } else {
+          chapaMsg = toStr(data?.msg) || toStr(data?.detail) || toStr(data?.error) || ''
+        }
         const errMsg = chapaMsg || `Chapa API error: ${res.status}`
         console.error(`[chapa] API error (${res.status}): ${errMsg}`)
         const err = new Error(errMsg)
@@ -115,19 +128,37 @@ async function initializeTransaction({ amount, currency, email, first_name, last
   const configErrors = paymentConfig.validate()
   if (configErrors.length > 0 && !paymentConfig.isSimulationMode) {
     console.error('[chapa:initializeTransaction] Configuration errors:', configErrors)
-    const err = new Error('Payment gateway configuration error')
+    // In test mode without secret key, activate test simulation rather than crashing
+    if (!paymentConfig.isLiveMode && !paymentConfig.chapaSecretKey) {
+      console.warn(`[chapa:initializeTransaction] Missing Chapa test keys. Activating Test Simulation Mode for tx_ref: ${tx_ref}`)
+      const simCheckoutUrl = `${paymentConfig.chapaFrontendUrl}?status=success&tx_ref=${encodeURIComponent(tx_ref)}&simulation=true`
+      return {
+        message: 'Hosted Link (Test Simulation)',
+        status: 'success',
+        data: {
+          checkout_url: simCheckoutUrl,
+          tx_ref,
+          simulation: true,
+          note: 'Chapa test key not configured. Activated Test Gateway simulation.',
+        },
+      }
+    }
+    const err = new Error('Payment gateway configuration error: ' + configErrors.join('; '))
     err.status = 500
     err.configErrors = configErrors
     throw err
   }
 
+  // Clean phone number (strip whitespace, dashes, dots, parentheses)
+  const cleanPhone = (phone_number || '').replace(/[\s\-\(\)\.]/g, '')
+
   const body = {
     amount: String(amount),
     currency: currency || 'ETB',
-    email: email || '',
-    first_name: first_name || 'Guest',
-    last_name: last_name || 'Guest',
-    phone_number: phone_number || '',
+    email: (email || '').trim().toLowerCase(),
+    first_name: (first_name || 'Guest').trim(),
+    last_name: (last_name || 'Guest').trim() || (first_name || 'Guest').trim(),
+    phone_number: cleanPhone,
     tx_ref,
     callback_url: callback_url || paymentConfig.chapaCallbackUrl,
     return_url: return_url || paymentConfig.chapaReturnUrl,
@@ -273,14 +304,15 @@ async function directCharge({ type, amount, currency, email, first_name, last_na
     throw err
   }
 
+  const cleanMobile = (mobile || '').replace(/[\s\-\(\)\.]/g, '')
   const body = {
     amount: String(amount),
     currency: currency || 'ETB',
-    email: email || '',
-    first_name: first_name || '',
-    last_name: last_name || '',
+    email: (email || '').trim().toLowerCase(),
+    first_name: (first_name || '').trim(),
+    last_name: (last_name || '').trim(),
     tx_ref,
-    mobile,
+    mobile: cleanMobile,
     callback_url: callback_url || paymentConfig.chapaCallbackUrl,
     return_url: return_url || paymentConfig.chapaReturnUrl,
   }

@@ -1,4 +1,14 @@
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import Settings from '../models/settingsModels.js'
+
+try {
+  const __paymentFilename = fileURLToPath(import.meta.url)
+  const __paymentDirname = path.dirname(__paymentFilename)
+  dotenv.config({ path: path.join(__paymentDirname, '..', '.env') })
+  dotenv.config()
+} catch { /* ignore */ }
 
 let cachedDbSettings = null
 

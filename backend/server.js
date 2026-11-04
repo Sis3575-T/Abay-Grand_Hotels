@@ -2,6 +2,12 @@ import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __serverFilename = fileURLToPath(import.meta.url)
+const __serverDirname = path.dirname(__serverFilename)
+dotenv.config({ path: path.join(__serverDirname, '.env') })
 dotenv.config()
 import connectDB from "./config/mongodb.js"
 import connectCloudinary from './config/cloudinary.js'

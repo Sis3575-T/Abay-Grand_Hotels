@@ -142,7 +142,12 @@ const HotelDetails = () => {
     const errors = {}
     if (!formData.name.trim()) errors.name = 'Name is required'
     if (!formData.email.trim()) errors.email = 'Email is required'
-    if (!formData.phone.trim()) errors.phone = 'Phone is required'
+    const cleanPhone = formData.phone.replace(/[\s\-\(\)\.]/g, '')
+    if (!cleanPhone) {
+      errors.phone = 'Phone is required'
+    } else if (!/^\+?[0-9]{9,15}$/.test(cleanPhone)) {
+      errors.phone = 'Please enter a valid phone number (e.g. 0911223344 or +251911223344)'
+    }
     if (!formData.checkin) errors.checkin = 'Check-in date is required'
     if (!formData.checkout) errors.checkout = 'Check-out date is required'
     if (formData.checkin && formData.checkout && formData.checkout <= formData.checkin) {
@@ -201,8 +206,10 @@ const HotelDetails = () => {
       setNotification(null)
 
       if (paymentMethod === 'Chapa') {
+        const cleanPhone = formData.phone.replace(/[\s\-\(\)\.]/g, '')
         const response = await axios.post(`${backendUrl}/api/reservation/book-with-chapa`, {
           ...formData,
+          phone: cleanPhone,
           paymentMethod: 'Chapa',
           channels: [],
           frontendUrl: window.location.origin,
@@ -235,7 +242,11 @@ const HotelDetails = () => {
       }
 
       // Standard reservation (Pay at Hotel)
-      const response = await axios.post(`${backendUrl}/api/reservation/create`, formData)
+      const cleanPhone = formData.phone.replace(/[\s\-\(\)\.]/g, '')
+      const response = await axios.post(`${backendUrl}/api/reservation/create`, {
+        ...formData,
+        phone: cleanPhone,
+      })
       if (response.data?.success) {
         setNotification({ type: 'success', message: 'Reservation booked successfully! You can pay at the hotel.' })
         setAvailability({ checking: false, available: true, message: '' })
@@ -254,21 +265,22 @@ const HotelDetails = () => {
     } catch (error) {
       console.error('Booking error:', error)
       const errData = error.response?.data
+      const status = error.response?.status
       const rawMsg = errData?.message || error.message || 'Error occurred while booking. Please try again.'
 
-      // Friendly interpretation of Chapa API key / account active error
-      const isChapaError = paymentMethod === 'Chapa' && (
-        rawMsg.toLowerCase().includes('api key') ||
+      // Only show gateway updating notice if explicitly returned as an API key / merchant authentication issue
+      const isGatewayAuthError = paymentMethod === 'Chapa' && (
+        errData?.isApiKeyError === true ||
+        status === 401 ||
         rawMsg.toLowerCase().includes('account is active') ||
-        rawMsg.toLowerCase().includes('chapa') ||
-        error.response?.status === 401 ||
-        error.response?.status === 502
+        rawMsg.toLowerCase().includes('account is not active') ||
+        rawMsg.toLowerCase().includes('invalid api key')
       )
 
-      if (isChapaError) {
+      if (isGatewayAuthError) {
         setNotification({
           type: 'error',
-          message: 'Chapa online payment is temporarily unavailable. You can easily complete your booking now with "Pay at Hotel".',
+          message: 'Chapa online payment gateway is currently updating. You can easily complete your booking now with "Pay at Hotel".',
           allowPayAtHotel: true,
         })
       } else {
@@ -429,7 +441,7 @@ const HotelDetails = () => {
                 className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-lime-500 focus:outline-none"
                 type="tel"
                 name="phone"
-                placeholder="+251 91 234 5678"
+                placeholder="0911223344 or +251911223344"
                 value={formData.phone}
                 onChange={handleChange}
                 required

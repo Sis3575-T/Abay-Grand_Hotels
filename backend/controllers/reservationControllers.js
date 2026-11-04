@@ -560,14 +560,24 @@ const bookWithChapa = async (req, res) => {
   try {
     const { name, email, phone, checkin, checkout, guests, roomName, roomId, paymentMethod, channels, frontendUrl } = req.body
 
+    const trimmedName = (name || '').trim()
+    const cleanEmail = (email || '').trim().toLowerCase()
+    const cleanPhone = (phone || '').replace(/[\s\-\(\)\.]/g, '')
+
     paymentConfig.logConfig('[bookWithChapa]')
 
     console.log('[bookWithChapa] Request body:', JSON.stringify({
-      name, email, phone, checkin, checkout, guests, roomName, roomId, paymentMethod, channels,
+      name: trimmedName, email: cleanEmail, phone: cleanPhone, checkin, checkout, guests, roomName, roomId, paymentMethod, channels,
     }, null, 2))
 
-    if (!name || !email || !checkin || !checkout || !guests || !roomName) {
+    if (!trimmedName || !cleanEmail || !checkin || !checkout || !guests || !roomName) {
       return res.status(400).json({ success: false, message: 'All booking fields are required' })
+    }
+    if (cleanPhone && !/^\+?[0-9]{9,15}$/.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format. Please enter a valid number (e.g. 0911223344 or +251911223344)',
+      })
     }
     if (checkin >= checkout) {
       return res.status(400).json({ success: false, message: 'Check-out date must be after check-in date' })
@@ -719,20 +729,20 @@ const bookWithChapa = async (req, res) => {
 
       const origin = frontendUrl || paymentConfig.frontendUrl
       const frontendReturnUrl = `${origin}/payment/result?tx_ref=${tx_ref}`
-      const nameParts = (name || '').trim().split(/\s+/)
+      const nameParts = trimmedName.split(/\s+/)
       const chapaPayload = {
         amount: String(pricing.totalAmount),
         currency: 'ETB',
-        email: email || '',
-        first_name: nameParts[0] || name || 'Guest',
+        email: cleanEmail,
+        first_name: nameParts[0] || 'Guest',
         last_name: nameParts.slice(1).join(' ') || nameParts[0] || 'Guest',
-        phone_number: phone || '',
+        phone_number: cleanPhone,
         tx_ref,
         callback_url: paymentConfig.chapaCallbackUrl,
         return_url: frontendReturnUrl,
         customization: {
           title: 'Hotel Booking',
-          description: `Payment for ${roomName} - ${name}`,
+          description: `Payment for ${roomName} - ${trimmedName}`,
         },
       }
 
@@ -767,13 +777,14 @@ const bookWithChapa = async (req, res) => {
         await payment.save()
 
         const isApiKeyError = chapaError.isApiKeyError || chapaError.status === 401 ||
-          chapaMsg.toLowerCase().includes('api key') || chapaMsg.toLowerCase().includes('account is active')
+          chapaMsg.toLowerCase().includes('account is active') ||
+          chapaMsg.toLowerCase().includes('invalid api key')
 
         const displayMsg = isApiKeyError
-          ? "Chapa online payment is temporarily unavailable. Please select 'Pay at Hotel' to complete your reservation."
+          ? "Chapa online payment gateway is currently updating. Please select 'Pay at Hotel' to complete your reservation."
           : chapaMsg + (chapaDetail ? '. ' + chapaDetail : '')
 
-        return res.status(chapaError?.status || 502).json({
+        return res.status(chapaError?.status || 500).json({
           success: false,
           isApiKeyError,
           allowPayAtHotel: true,
@@ -781,7 +792,7 @@ const bookWithChapa = async (req, res) => {
           message: displayMsg,
           error: chapaError?.chapaData || chapaError?.message || String(chapaError),
           validationErrors: chapaError?.validationErrors,
-          status: chapaError?.status || 502,
+          status: chapaError?.status || 500,
         })
       }
 
