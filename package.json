@@ -2,8 +2,15 @@
   "name": "abay-grand-hotel",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend",
+    "admin",
+    "backend"
+  ],
   "scripts": {
-    "build": "npm --prefix frontend run build",
+    "build": "npm --prefix frontend run build && npm --prefix admin run build",
+    "build:admin": "npm --prefix admin run build",
+    "build:frontend": "npm --prefix frontend run build",
     "test": "node --check backend/server.js",
     "start": "node backend/server.js",
     "db:diag": "node backend/scripts/db-diagnostics.js",
