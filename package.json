@@ -1,5 +1,11 @@
 {
+  "name": "abay-grand-hotel",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
+    "build": "npm --prefix frontend run build",
+    "test": "node --check backend/server.js",
+    "start": "node backend/server.js",
     "db:diag": "node backend/scripts/db-diagnostics.js",
     "generate-favicons": "node scripts/generate-favicons-standalone.mjs"
   },
